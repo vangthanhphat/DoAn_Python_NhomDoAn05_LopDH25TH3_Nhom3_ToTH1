@@ -91,7 +91,8 @@ class LoginWindow:
         lbl_hint.pack(side="bottom")
 
         self.entry_user.focus_set()
-
+        
+    # Xử lý xác thực đăng nhập: kiểm tra tài khoản, mật khẩu băm SHA-256 và phân quyền người dùng
     def handle_login(self):
         username = self.username_var.get().strip()
         pwd = self.password_var.get().strip()
@@ -126,6 +127,7 @@ class LoginWindow:
         except Exception as e:
             messagebox.showerror("Lỗi CSDL", f"Đã xảy ra lỗi:\n{e}")
 
+    # Mở cửa sổ popup đăng ký tài khoản nhân viên y tế mới
     def open_register_window(self):
         self.root.withdraw()
         reg_win = tk.Toplevel(self.root)
@@ -243,6 +245,7 @@ class QuanLyBenhNhanApp:
         # Tạo Bộ Tab Điều hướng
         self.create_tabs()
 
+    # Thiết lập giao diện, màu sắc và font chữ cho các Tab và bảng Treeview
     def setup_styles(self):
         style = ttk.Style()
         style.theme_use("default")
@@ -263,6 +266,7 @@ class QuanLyBenhNhanApp:
         # Style Combobox
         style.configure("TCombobox", font=("Times New Roman", 11), padding=3)
 
+    # Tạo thanh tiêu đề đầu trang: hiển thị logo phòng khám, thông tin người dùng và nút Đăng xuất
     def create_header(self):
         header_frame = tk.Frame(self.root, bg="#0F766E", height=65)
         header_frame.pack(fill="x", side="top")
@@ -296,6 +300,7 @@ class QuanLyBenhNhanApp:
                                cursor="hand2", relief="flat", padx=10, pady=3, command=self.handle_logout)
         btn_logout.pack(side="left")
 
+    # Khởi tạo thanh menu hệ thống (Hệ thống, Trợ giúp, Giới thiệu tác giả)
     def create_menu(self):
         menubar = tk.Menu(self.root)
 
@@ -316,6 +321,7 @@ class QuanLyBenhNhanApp:
 
         self.root.config(menu=menubar)
 
+    # Xử lý đăng xuất: đóng phiên làm việc hiện tại và quay về màn hình đăng nhập
     def handle_logout(self):
         if messagebox.askyesno("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?"):
             self.root.destroy()
@@ -323,11 +329,13 @@ class QuanLyBenhNhanApp:
             LoginWindow(login_root)
             login_root.mainloop()
 
+    # Khởi tạo lại CSDL về trạng thái ban đầu khi cần đặt lại dữ liệu mẫu
     def reset_db(self):
         if messagebox.askyesno("Xác nhận", "Bạn có chắc chắn muốn nạp lại dữ liệu mẫu của hệ thống?"):
             init_database(force=True)
             messagebox.showinfo("Thành công", "Đã khởi tạo và đồng bộ CSDL thành công!")
 
+    # Hiển thị thông tin đồ án, sinh viên thực hiện và giảng viên hướng dẫn
     def show_about(self):
         about_win = tk.Toplevel(self.root)
         about_win.title("THÔNG TIN ĐỒ ÁN")
@@ -354,6 +362,7 @@ class QuanLyBenhNhanApp:
         tk.Button(about_win, text="Đóng", bg="#0D9488", fg="white", font=("Times New Roman", 11), width=10,
                   command=about_win.destroy).pack(pady=5)
 
+    # Mở bảng tóm tắt hướng dẫn sử dụng các chức năng của phần mềm
     def show_user_guide(self):
         guide = (
             "HƯỚNG DẪN SỬ DỤNG NHANH:\n\n"
@@ -365,6 +374,7 @@ class QuanLyBenhNhanApp:
         )
         messagebox.showinfo("Hướng dẫn sử dụng", guide)
 
+    # Khởi tạo thanh điều hướng các Tab và phân quyền hiển thị theo vai trò người dùng
     def create_tabs(self):
         self.tab_control = ttk.Notebook(self.root)
 
@@ -423,6 +433,7 @@ class QuanLyBenhNhanApp:
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_changed)
         self.tab_control.pack(fill="both", expand=True, padx=10, pady=5)
 
+    # Tự động tải lại dữ liệu mới nhất từ CSDL khi người dùng chuyển giữa các Tab
     def on_tab_changed(self, event):
         """Tự động làm mới dữ liệu khi người dùng chuyển giữa các Tab"""
         try:
@@ -603,6 +614,7 @@ class QuanLyBenhNhanApp:
         # Nạp dữ liệu ban đầu
         self.p_load_data()
 
+    # Tải danh sách bệnh nhân từ CSDL MySQL lên bảng hiển thị Treeview
     def p_load_data(self, query=None, params=()):
         for row in self.p_tree.get_children():
             self.p_tree.delete(row)
@@ -624,6 +636,7 @@ class QuanLyBenhNhanApp:
         except Exception as e:
             messagebox.showerror("Lỗi", f"Lỗi tải danh sách bệnh nhân:\n{e}")
 
+    # Xử lý sự kiện click chọn một dòng bệnh nhân: đổ thông tin lên form để xem/sửa
     def p_on_select_row(self, event):
         sel = self.p_tree.selection()
         if not sel:
@@ -654,6 +667,7 @@ class QuanLyBenhNhanApp:
             self.p_nhommau.set(data[9] or "O")
             self.p_tiensu.set(data[10] or "")
 
+    # Tự động sinh mã bệnh nhân mới dạng tự tăng (BNxxx) và chuẩn bị thêm mới
     def p_action_add(self):
         self.p_action_clear()
         # Tự động sinh mã BN tiếp theo
@@ -672,6 +686,7 @@ class QuanLyBenhNhanApp:
             else:
                 self.p_mabn.set("BN001")
 
+    # Xóa trắng form nhập liệu thông tin bệnh nhân
     def p_action_clear(self):
         self.p_mabn.set("")
         self.p_holot.set("")
@@ -689,6 +704,7 @@ class QuanLyBenhNhanApp:
         except Exception:
             pass
 
+    # Kiểm tra dữ liệu hợp lệ và Lưu thông tin bệnh nhân (Thêm mới INSERT hoặc Cập nhật UPDATE)
     def p_action_save(self):
         mabn = self.p_mabn.get().strip()
         holot = self.p_holot.get().strip()
@@ -734,6 +750,7 @@ class QuanLyBenhNhanApp:
         except Exception as e:
             messagebox.showerror("Lỗi CSDL", f"Lỗi khi lưu bệnh nhân:\n{e}")
 
+    # Xóa hồ sơ bệnh nhân được chọn khỏi CSDL sau khi người dùng xác nhận
     def p_action_delete(self):
         mabn = self.p_mabn.get().strip()
         if not mabn:
@@ -756,6 +773,7 @@ class QuanLyBenhNhanApp:
             except Exception as e:
                 messagebox.showerror("Lỗi CSDL", f"Lỗi khi xóa bệnh nhân:\n{e}")
 
+    # Tìm kiếm bệnh nhân theo từ khóa (Mã BN, Họ tên, SĐT, CCCD, BHYT)
     def p_search_data(self):
         keyword = self.p_search_var.get().strip()
         if not keyword:
@@ -770,6 +788,7 @@ class QuanLyBenhNhanApp:
         kw = f"%{keyword}%"
         self.p_load_data(sql, (kw, kw, kw, kw, kw))
 
+    # Xuất toàn bộ danh sách bệnh nhân ra file Excel (.xlsx) có định dạng bảng chuẩn
     def p_export_excel(self):
         conn = get_connection()
         if not conn:
@@ -1017,6 +1036,7 @@ class QuanLyBenhNhanApp:
         self.ex_load_comboboxes()
         self.ex_load_history()
 
+    # Tải lại danh sách bệnh nhân vào combobox để cập nhật các bệnh nhân mới tiếp nhận
     def ex_reload_patients(self):
         """Tự động làm mới danh sách bệnh nhân khi người dùng bấm mở Combobox"""
         conn = get_connection()
@@ -1041,6 +1061,7 @@ class QuanLyBenhNhanApp:
         except Exception:
             pass
 
+    # Nạp danh mục Bác sĩ, Khoa phòng và Thuốc từ CSDL vào các Combobox chọn lựa
     def ex_load_comboboxes(self):
         conn = get_connection()
         if not conn:
@@ -1084,6 +1105,7 @@ class QuanLyBenhNhanApp:
 
         conn.close()
 
+    # Bắt sự kiện chọn bệnh nhân từ Combobox và lưu mã bệnh nhân
     def ex_on_patient_selected(self, event=None):
         val = self.cbb_ex_patient.get().strip()
         if val in self.patients_cache:
@@ -1093,6 +1115,7 @@ class QuanLyBenhNhanApp:
         elif val:
             self.ex_mabn.set(val)
 
+    # Nạp danh sách các phiếu khám gần đây vào bảng lịch sử khám lâm sàng
     def ex_load_history(self):
         for r in self.ex_tree_hist.get_children():
             self.ex_tree_hist.delete(r)
@@ -1112,6 +1135,7 @@ class QuanLyBenhNhanApp:
             self.ex_tree_hist.insert("", "end", values=(row[0], row[1], row[2], nk, row[4], row[5]))
         conn.close()
 
+    # Click chọn một phiếu khám cũ: hiển thị lại thông tin khám và tải danh sách đơn thuốc đã kê
     def ex_on_select_history(self, event):
         sel = self.ex_tree_hist.selection()
         if not sel:
@@ -1163,6 +1187,7 @@ class QuanLyBenhNhanApp:
 
         conn.close()
 
+    # Tải danh sách chi tiết các loại thuốc trong đơn thuốc của một phiếu khám
     def rx_load_prescription(self, mapk):
         for r in self.rx_tree.get_children():
             self.rx_tree.delete(r)
@@ -1178,6 +1203,7 @@ class QuanLyBenhNhanApp:
         self.lbl_rx_total.config(text=f"Tổng tiền thuốc: {int(total):,} đ")
         conn.close()
 
+    # Tự động sinh mã phiếu khám mới (PKxxx) và đặt các chỉ số sinh hiệu mặc định
     def ex_action_new(self):
         self.ex_action_clear()
         # Sinh mã phiếu khám mới
@@ -1196,6 +1222,7 @@ class QuanLyBenhNhanApp:
             else:
                 self.ex_mapk.set("PK001")
 
+    # Xóa trắng form tiếp nhận khám bệnh và danh sách thuốc kê đơn
     def ex_action_clear(self):
         self.ex_mapk.set("")
         if hasattr(self, "cbb_ex_patient") and self.cbb_ex_patient["values"]:
@@ -1213,6 +1240,7 @@ class QuanLyBenhNhanApp:
             self.rx_tree.delete(r)
         self.lbl_rx_total.config(text="Tổng tiền thuốc: 0 đ")
 
+    # Thêm thuốc vào đơn thuốc điện tử (kiểm tra tồn kho và tính thành tiền)
     def rx_action_add_drug(self):
         drug_label = self.cbb_rx_drug.get()
         if drug_label not in self.drugs_cache:
@@ -1247,6 +1275,7 @@ class QuanLyBenhNhanApp:
         ))
         self.rx_calculate_total()
 
+    # Xóa thuốc đang chọn khỏi danh sách kê đơn hiện tại
     def rx_action_remove_drug(self):
         sel = self.rx_tree.selection()
         if not sel:
@@ -1255,6 +1284,7 @@ class QuanLyBenhNhanApp:
         self.rx_tree.delete(sel[0])
         self.rx_calculate_total()
 
+    # Tính tổng tiền thuốc của toàn bộ toa thuốc hiện tại
     def rx_calculate_total(self):
         total = 0
         for child in self.rx_tree.get_children():
@@ -1263,6 +1293,7 @@ class QuanLyBenhNhanApp:
             total += float(clean_val)
         self.lbl_rx_total.config(text=f"Tổng tiền thuốc: {int(total):,} đ")
 
+    # Lưu bệnh án và đơn thuốc vào CSDL (quản lý giao dịch Transaction và tự động trừ kho thuốc)
     def ex_action_save(self):
         mapk = self.ex_mapk.get().strip()
         
@@ -1354,6 +1385,7 @@ class QuanLyBenhNhanApp:
         except Exception as e:
             messagebox.showerror("Lỗi CSDL", f"Lỗi khi lưu bệnh án:\n{e}")
 
+    # Xóa phiếu khám bệnh và hoàn trả số lượng thuốc đã kê lại vào kho dược
     def ex_action_delete(self):
         mapk = self.ex_mapk.get().strip()
         if not mapk:
@@ -1485,6 +1517,7 @@ class QuanLyBenhNhanApp:
         self.dr_tree.bind("<<TreeviewSelect>>", self.dr_on_select_row)
         self.dr_load_data()
 
+    # Tải danh sách thuốc từ kho lên bảng hiển thị, tô màu cảnh báo nếu thuốc sắp hết
     def dr_load_data(self, query=None, params=()):
         for r in self.dr_tree.get_children():
             self.dr_tree.delete(r)
@@ -1506,6 +1539,7 @@ class QuanLyBenhNhanApp:
             self.dr_tree.insert("", "end", values=(r[0], r[1], r[2], r[3], f"{int(r[4]):,}đ", r[5], hsd, r[7]), tags=tags)
         conn.close()
 
+    # Click chọn một loại thuốc trên bảng để đưa thông tin lên form chỉnh sửa
     def dr_on_select_row(self, event):
         sel = self.dr_tree.selection()
         if not sel:
@@ -1534,6 +1568,7 @@ class QuanLyBenhNhanApp:
                 pass
             self.dr_cachdung.set(d[6] or "")
 
+    # Tự động sinh mã thuốc mới dạng tự tăng (Txx) để chuẩn bị nhập thuốc mới
     def dr_action_add(self):
         self.dr_action_clear()
         conn = get_connection()
@@ -1551,6 +1586,7 @@ class QuanLyBenhNhanApp:
             else:
                 self.dr_mathuoc.set("T01")
 
+    # Xóa trắng form nhập thông tin dược phẩm
     def dr_action_clear(self):
         self.dr_mathuoc.set("")
         self.dr_tenthuoc.set("")
@@ -1560,6 +1596,7 @@ class QuanLyBenhNhanApp:
         self.dr_cachdung.set("")
         self.dr_search_var.set("")
 
+    # Lưu thông tin thuốc vào CSDL (Thêm mới INSERT hoặc Cập nhật đơn giá/tồn kho UPDATE)
     def dr_action_save(self):
         mathuoc = self.dr_mathuoc.get().strip()
         tenthuoc = self.dr_tenthuoc.get().strip()
@@ -1608,6 +1645,7 @@ class QuanLyBenhNhanApp:
         except Exception as e:
             messagebox.showerror("Lỗi CSDL", f"Lỗi lưu thuốc:\n{e}")
 
+    # Xóa một loại thuốc khỏi kho dược nếu chưa từng được kê trong đơn thuốc
     def dr_action_delete(self):
         mathuoc = self.dr_mathuoc.get().strip()
         if not mathuoc:
@@ -1628,6 +1666,7 @@ class QuanLyBenhNhanApp:
             except Exception as e:
                 messagebox.showerror("Lỗi CSDL", f"Không thể xóa thuốc này:\n{e}")
 
+    # Tìm kiếm thuốc theo mã thuốc, tên thuốc hoặc hoạt chất
     def dr_search(self):
         kw = self.dr_search_var.get().strip()
         if not kw:
@@ -1637,6 +1676,7 @@ class QuanLyBenhNhanApp:
         p = f"%{kw}%"
         self.dr_load_data(sql, (p, p, p))
 
+    # Lọc nhanh danh sách các loại thuốc có tồn kho thấp (<= 100 đơn vị) cần nhập thêm
     def dr_filter_low_stock(self):
         sql = "SELECT mathuoc, tenthuoc, hoatchat, donvitinh, dongia, soluongton, hansudung, cachdung FROM thuoc WHERE soluongton <= 100 ORDER BY soluongton ASC"
         self.dr_load_data(sql)
@@ -1763,6 +1803,7 @@ class QuanLyBenhNhanApp:
 
         self.bill_load_queue()
 
+    # Tải danh sách các phiếu khám cần thanh toán theo bộ lọc (Chờ thanh toán / Đã thanh toán / Tất cả)
     def bill_load_queue(self):
         for r in self.bill_tree_queue.get_children():
             self.bill_tree_queue.delete(r)
@@ -1790,6 +1831,7 @@ class QuanLyBenhNhanApp:
             self.bill_tree_queue.insert("", "end", values=(r[0], r[1], r[2], nk, r[4]))
         conn.close()
 
+    # Chọn phiếu khám để thanh toán: tính tiền khám, tiền thuốc, mức khấu trừ BHYT và số tiền thực thu
     def bill_on_select_queue(self, event):
         sel = self.bill_tree_queue.selection()
         if not sel:
@@ -1880,6 +1922,7 @@ class QuanLyBenhNhanApp:
 
         conn.close()
 
+    # Thực hiện thanh toán viện phí: lưu hóa đơn vào bảng hoadon và đổi trạng thái phiếu khám
     def bill_action_pay(self):
         if not hasattr(self, 'current_bill_data') or not self.current_bill_data:
             messagebox.showwarning("Chưa chọn", "Vui lòng chọn một phiếu khám để thanh toán!")
@@ -1930,6 +1973,7 @@ class QuanLyBenhNhanApp:
             except Exception as e:
                 messagebox.showerror("Lỗi thanh toán", f"Không thể hoàn tất thanh toán:\n{e}")
 
+    # Mở cửa sổ xem trước và in hóa đơn viện phí chuẩn của phòng khám
     def bill_action_print(self):
         if not hasattr(self, 'current_bill_data') or not self.current_bill_data:
             messagebox.showwarning("Chưa chọn", "Vui lòng chọn phiếu khám cần in hóa đơn!")
@@ -2100,6 +2144,7 @@ class QuanLyBenhNhanApp:
         self.rep_update_kpis()
         self.rep_calculate()
 
+    # Cập nhật số liệu thống kê tổng quan (Tổng bệnh nhân, Số lượt khám, Doanh thu, Danh mục thuốc)
     def rep_update_kpis(self):
         conn = get_connection()
         if not conn:
@@ -2123,6 +2168,7 @@ class QuanLyBenhNhanApp:
         self.kpi_cards["card_revenue"].config(text=f"{int(tot):,} đ")
         conn.close()
 
+    # Thống kê doanh thu và số lượt khám theo khoảng thời gian tùy chọn (Từ ngày - Đến ngày)
     def rep_calculate(self):
         f_date = self.rep_from_date.get().strip()
         t_date = self.rep_to_date.get().strip()
@@ -2160,6 +2206,7 @@ class QuanLyBenhNhanApp:
         )
         conn.close()
 
+    # Xuất báo cáo thống kê doanh thu ra file Excel (.xlsx) chuẩn báo cáo tài chính
     def rep_export_excel(self):
         f_date = self.rep_from_date.get().strip()
         t_date = self.rep_to_date.get().strip()
