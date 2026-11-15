@@ -17,15 +17,11 @@ if /i "%confirm%" neq "Y" (
 )
 
 echo.
-echo Đang tiến hành khôi phục code từ Checkpoint gốc...
+echo Đang tiến hành khôi phục code từ Checkpoint Git gốc...
 
+cd /d "%~dp0.."
 git restore .
 git clean -fd
-
-if exist "..\QuanLyBenhNhan_SAO_LUU_GOC\QLBN.py" (
-    copy /Y "..\QuanLyBenhNhan_SAO_LUU_GOC\QLBN.py" "QLBN.py" >nul
-    copy /Y "..\QuanLyBenhNhan_SAO_LUU_GOC\DatabaseQLBN.py" "DatabaseQLBN.py" >nul
-)
 
 echo.
 echo =====================================================================
