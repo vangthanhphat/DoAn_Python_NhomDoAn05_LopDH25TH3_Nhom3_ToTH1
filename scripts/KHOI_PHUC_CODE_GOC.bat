@@ -1,37 +1,32 @@
 @echo off
 chcp 65001 >nul
-title KHÔI PHỤC CODE GỐC - QUẢN LÝ BỆNH NHÂN
+title KHOI PHUC CODE GOC - QUAN LY BENH NHAN
 
 echo =====================================================================
-echo         TIỆN ÍCH KHÔI PHỤC CODE GỐC CHUẨN (CHECKPOINT)
+echo                 TIEN ICH KHOI PHUC CODE GOC
 echo =====================================================================
 echo.
-echo Bạn có chắc chắn muốn hủy mọi thay đổi đang sửa và quay về bản gốc chuẩn?
+echo Ban co chac chan muon huy moi thay doi va quay ve ban goc chuan?
 echo.
-set /p confirm="Nhập 'Y' để đồng ý khôi phục, hoặc nhấn phím khác để hủy: "
-if /i "%confirm%" neq "Y" (
-    echo.
-    echo Đã hủy thao tác khôi phục. Code hiện tại được giữ nguyên!
-    pause
-    exit /b
-)
+set /p confirm="Nhap Y de dong y khoi phuc, hoac nhan phim bat ky de huy: "
+if /i not "%confirm%"=="Y" goto cancel
 
 echo.
-echo Đang tiến hành khôi phục code từ Checkpoint Git gốc...
-
+echo Dang tien hanh khoi phuc code ve trang thai goc...
 cd /d "%~dp0.."
 git restore .
 git clean -fd
 
-if exist "..\QuanLyBenhNhan_SAO_LUU_GOC\QLBN.py" (
-    copy /Y "..\QuanLyBenhNhan_SAO_LUU_GOC\QLBN.py" "src\QLBN.py" >nul 2>&1
-    copy /Y "..\QuanLyBenhNhan_SAO_LUU_GOC\DatabaseQLBN.py" "src\DatabaseQLBN.py" >nul 2>&1
-)
-
 echo.
 echo =====================================================================
-echo [THÀNH CÔNG] Toàn bộ code đã được khôi phục về trạng thái chuẩn ban đầu!
-echo Bạn có thể yên tâm tiếp tục thực hành, sửa code thoải mái.
+echo [THANH CONG] Toan bo code da duoc khoi phuc ve trang thai chuan!
 echo =====================================================================
 echo.
 pause
+exit /b
+
+:cancel
+echo.
+echo Da huy thao tac khoi phuc. Code hien tai duoc giu nguyen!
+pause
+exit /b
