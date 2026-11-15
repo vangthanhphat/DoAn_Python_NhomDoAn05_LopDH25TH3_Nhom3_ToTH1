@@ -283,7 +283,7 @@ class QuanLyBenhNhanApp:
         title_box = tk.Frame(left_box, bg="#0F766E")
         title_box.pack(side="left")
         tk.Label(title_box, text="HỆ THỐNG QUẢN LÝ BỆNH NHÂN", font=("Times New Roman", 16, "bold"), fg="white", bg="#0F766E").pack(anchor="w")
-        tk.Label(title_box, text="PHÒNG KHÁM ĐA KHOA AN GIANG - CHUYÊN ĐỀ PYTHON", font=("Times New Roman", 10), fg="#99F6E4", bg="#0F766E").pack(anchor="w")
+        tk.Label(title_box, text="PHÒNG KHÁM ĐA KHOA AN GIANG", font=("Times New Roman", 10), fg="#99F6E4", bg="#0F766E").pack(anchor="w")
 
         # Bên phải: Thông tin người dùng + Đăng xuất
         right_box = tk.Frame(header_frame, bg="#0F766E")
@@ -344,7 +344,10 @@ class QuanLyBenhNhanApp:
             "Giảng viên hướng dẫn: Ths. Nguyễn Ngọc Minh\n"
             "Khoa: Công nghệ Thông tin - Trường Đại học An Giang\n"
             "Mã học phần: COS525 (Chuyên đề Python)\n"
-            "Phiên bản: v2.0 (Giao diện nâng cao & Báo cáo chuẩn quy định)\n"
+            "Sinh viên thực hiện:\n"
+            "Văng Thành Phát - DTH245849\n"
+            "Lê Minh Triết -  DTH245928\n"
+
             "--------------------------------------------------"
         )
         tk.Label(about_win, text=info, font=("Times New Roman", 11), fg="#475569", bg="#FFFFFF", justify="left").pack(pady=10)
@@ -785,19 +788,7 @@ class QuanLyBenhNhanApp:
             ws = wb.active
             ws.title = "DanhSachBenhNhan"
 
-            # Tiêu đề báo cáo
-            ws.merge_cells("A1:K1")
-            ws["A1"] = "DANH SÁCH BỆNH NHÂN - PHÒNG KHÁM ĐA KHOA"
-            ws["A1"].font = Font(name="Times New Roman", size=16, bold=True, color="003366")
-            ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-
-            ws.merge_cells("A2:K2")
-            ws["A2"] = f"Ngày xuất báo cáo: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-            ws["A2"].font = Font(name="Times New Roman", size=11, italic=True)
-            ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
-
             headers = ["STT", "Mã BN", "Họ & Tên lót", "Tên", "Giới tính", "Ngày sinh", "Số ĐT", "CCCD/CMND", "Số BHYT", "Nhóm máu", "Địa chỉ"]
-            ws.append([]) # Dòng 3 trống
             ws.append(headers)
 
             # Style header bảng
@@ -808,7 +799,7 @@ class QuanLyBenhNhanApp:
             )
 
             for col_num in range(1, len(headers) + 1):
-                cell = ws.cell(row=4, column=col_num)
+                cell = ws.cell(row=1, column=col_num)
                 cell.font = Font(name="Times New Roman", size=12, bold=True, color="FFFFFF")
                 cell.fill = header_fill
                 cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -822,7 +813,7 @@ class QuanLyBenhNhanApp:
                     ns = str(r[4] or "")
                 row_val = [idx, r[0], r[1], r[2], r[3], ns, r[5], r[6], r[7], r[8], r[9]]
                 ws.append(row_val)
-                current_row = idx + 4
+                current_row = idx + 1
                 for col_num in range(1, len(headers) + 1):
                     c = ws.cell(row=current_row, column=col_num)
                     c.font = Font(name="Times New Roman", size=11)
@@ -830,11 +821,11 @@ class QuanLyBenhNhanApp:
                     if col_num in [1, 2, 5, 6, 7, 8, 9, 10]:
                         c.alignment = Alignment(horizontal="center")
 
-            # Tự động canh độ rộng cột (bỏ qua dòng 1 và 2 tiêu đề đã merge để tránh lỗi MergedCell)
+            # Tự động canh độ rộng cột
             for col_idx, col in enumerate(ws.columns, 1):
                 col_letter = get_column_letter(col_idx)
                 max_len = 0
-                for cell in col[2:]: # Bắt đầu từ dòng 3 trở đi
+                for cell in col:
                     val = str(cell.value or '')
                     if len(val) > max_len:
                         max_len = len(val)
@@ -2195,23 +2186,12 @@ class QuanLyBenhNhanApp:
             ws = wb.active
             ws.title = "BaoCaoDoanhThu"
 
-            ws.merge_cells("A1:J1")
-            ws["A1"] = "BÁO CÁO THỐNG KÊ DOANH THU VIỆN PHÍ"
-            ws["A1"].font = Font(name="Times New Roman", size=16, bold=True, color="003366")
-            ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-
-            ws.merge_cells("A2:J2")
-            ws["A2"] = f"Thời gian thống kê: Từ ngày {f_date} đến ngày {t_date}"
-            ws["A2"].font = Font(name="Times New Roman", size=11, italic=True)
-            ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
-
             headers = ["Mã HĐ", "Mã PK", "Mã BN", "Họ tên Bệnh nhân", "Ngày thanh toán", "Tiền khám (đ)", "Tiền thuốc (đ)", "BHYT giảm (đ)", "Thực thu (đ)", "Người thu"]
-            ws.append([])
             ws.append(headers)
 
             header_fill = PatternFill(start_color="0D9488", end_color="0D9488", fill_type="solid")
             for col_idx in range(1, len(headers) + 1):
-                cell = ws.cell(row=4, column=col_idx)
+                cell = ws.cell(row=1, column=col_idx)
                 cell.font = Font(name="Times New Roman", size=12, bold=True, color="FFFFFF")
                 cell.fill = header_fill
                 cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -2226,15 +2206,15 @@ class QuanLyBenhNhanApp:
                 total_sum += r[8]
 
             # Dòng tổng cộng
-            last_row = len(rows) + 5
+            last_row = len(rows) + 2
             ws.cell(row=last_row, column=4, value="TỔNG CỘNG DOANH THU:").font = Font(name="Times New Roman", size=12, bold=True)
             ws.cell(row=last_row, column=9, value=total_sum).font = Font(name="Times New Roman", size=12, bold=True, color="DC2626")
 
-            # Tự động canh độ rộng cột (bỏ qua dòng 1 và 2 tiêu đề đã merge)
+            # Tự động canh độ rộng cột
             for col_idx, col in enumerate(ws.columns, 1):
                 col_letter = get_column_letter(col_idx)
                 max_len = 0
-                for cell in col[2:]:
+                for cell in col:
                     val = str(cell.value or '')
                     if len(val) > max_len:
                         max_len = len(val)
