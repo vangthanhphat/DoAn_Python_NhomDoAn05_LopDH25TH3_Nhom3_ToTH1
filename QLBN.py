@@ -27,6 +27,7 @@ def center_window(win, w=800, h=600):
 # CLASS ĐĂNG NHẬP (LOGIN)
 # ==============================================================================
 class LoginWindow:
+        # Khởi tạo form đăng nhập và các trường nhập liệu tài khoản
     def __init__(self, root):
         self.root = root
         self.root.title("ĐĂNG NHẬP - HỆ THỐNG QUẢN LÝ BỆNH NHÂN")
@@ -168,6 +169,7 @@ class LoginWindow:
         cbb_role.set("Bác sĩ")
         cbb_role.pack(side="right", expand=True, fill="x")
 
+        # Xử lý sự kiện lưu đăng ký tài khoản nhân viên mới vào CSDL MySQL
         def submit_reg():
             manv = entries["Mã nhân viên:"].get().strip()
             hoten = entries["Họ và tên:"].get().strip()
@@ -205,6 +207,7 @@ class LoginWindow:
             except Exception as e:
                 messagebox.showerror("Lỗi", f"Không thể đăng ký:\n{e}")
 
+        # Đóng cửa sổ đăng ký và hiện lại cửa sổ đăng nhập chính
         def on_close():
             reg_win.destroy()
             self.root.deiconify()
@@ -224,6 +227,7 @@ class LoginWindow:
 # CLASS ỨNG DỤNG CHÍNH: QUẢN LÝ BỆNH NHÂN (FULL TABS)
 # ==============================================================================
 class QuanLyBenhNhanApp:
+    # Khởi tạo cửa sổ chính của hệ thống, thiết lập kích thước và các thành phần giao diện
     def __init__(self, root, current_user):
         self.root = root
         self.current_user = current_user
@@ -2041,6 +2045,7 @@ class QuanLyBenhNhanApp:
         f_b = tk.Frame(win_print, bg="#FFFFFF", pady=10)
         f_b.pack(fill="x")
 
+        # Lưu nội dung hóa đơn ra file văn bản (.txt) trên máy tính
         def save_txt():
             f_path = filedialog.asksaveasfilename(defaultextension=".txt", initialfile=f"HoaDon_{d['mapk']}.txt")
             if f_path:
