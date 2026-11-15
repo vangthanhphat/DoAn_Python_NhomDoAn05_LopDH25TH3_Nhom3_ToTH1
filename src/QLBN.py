@@ -33,7 +33,7 @@ class LoginWindow:
         self.root.title("ĐĂNG NHẬP - HỆ THỐNG QUẢN LÝ BỆNH NHÂN")
         self.root.resizable(False, False)
         self.root.config(bg="#F0FDFA")
-        center_window(self.root, 440, 520)
+        center_window(self.root, 440, 560)
 
         # Biến lưu trữ form
         self.username_var = tk.StringVar(value="admin")
@@ -44,7 +44,7 @@ class LoginWindow:
 
         # Frame chứa toàn bộ nội dung
         main_frame = tk.Frame(self.root, bg="#FFFFFF", padx=30, pady=25, highlightbackground="#0D9488", highlightthickness=2)
-        main_frame.place(relx=0.5, rely=0.5, anchor="center", width=400, height=480)
+        main_frame.place(relx=0.5, rely=0.5, anchor="center", width=400, height=520)
 
         # Hiển thị Logo
         if os.path.exists(LOGO_PATH):
@@ -74,17 +74,21 @@ class LoginWindow:
         self.entry_pwd = tk.Entry(form_frame, textvariable=self.password_var, show="*", font=("Times New Roman", 12), relief="solid", bd=1)
         self.entry_pwd.pack(fill="x", ipady=4)
 
-        # Nút bấm đăng nhập & đăng ký
+        # Nút bấm đăng nhập, đăng ký & thoát
         btn_frame = tk.Frame(main_frame, bg="#FFFFFF")
-        btn_frame.pack(fill="x", pady=(20, 10))
+        btn_frame.pack(fill="x", pady=(18, 10))
 
         btn_login = tk.Button(btn_frame, text="ĐĂNG NHẬP", font=("Times New Roman", 12, "bold"), bg="#0D9488", fg="white",
                               cursor="hand2", relief="flat", command=self.handle_login)
-        btn_login.pack(fill="x", ipady=5, pady=(0, 8))
+        btn_login.pack(fill="x", ipady=5, pady=(0, 6))
 
         btn_reg = tk.Button(btn_frame, text="Đăng ký tài khoản nhân viên", font=("Times New Roman", 11), bg="#E0F2FE", fg="#0369A1",
                             cursor="hand2", relief="flat", command=self.open_register_window)
-        btn_reg.pack(fill="x", ipady=4)
+        btn_reg.pack(fill="x", ipady=4, pady=(0, 6))
+
+        btn_exit = tk.Button(btn_frame, text="THOÁT", font=("Times New Roman", 11, "bold"), bg="#EF4444", fg="white",
+                             cursor="hand2", relief="flat", command=self.root.destroy)
+        btn_exit.pack(fill="x", ipady=4)
 
         # Gợi ý tài khoản demo
         lbl_hint = tk.Label(main_frame, text="Tài khoản: admin | bsminh | dsanh | ttphat | tntriet (MK: 123)",
