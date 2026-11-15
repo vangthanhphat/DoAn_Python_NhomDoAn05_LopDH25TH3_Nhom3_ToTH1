@@ -304,6 +304,10 @@ class QuanLyBenhNhanApp:
                                cursor="hand2", relief="flat", padx=10, pady=3, command=self.handle_logout)
         btn_logout.pack(side="left")
 
+        btn_exit_app = tk.Button(right_box, text="Thoát", font=("Times New Roman", 10, "bold"), bg="#475569", fg="white",
+                                 cursor="hand2", relief="flat", padx=10, pady=3, command=self.root.destroy)
+        btn_exit_app.pack(side="left", padx=(6, 0))
+
     # Khởi tạo thanh menu hệ thống (Hệ thống, Trợ giúp, Giới thiệu tác giả)
     def create_menu(self):
         menubar = tk.Menu(self.root)
