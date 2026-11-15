@@ -1,10 +1,3 @@
--- ==============================================================================
--- ĐỒ ÁN MÔN HỌC: CHUYÊN ĐỀ PYTHON (COS525)
--- ĐỀ TÀI: XÂY DỰNG ỨNG DỤNG QUẢN LÝ BỆNH NHÂN
--- Sinh viên: Văng Thành Phát - MSSV: DTH245849 - Lớp: DH25TH3
--- Giảng viên hướng dẫn: ThS. Nguyễn Ngọc Minh
--- Khoa Công nghệ Thông tin - Trường Đại học An Giang
--- ==============================================================================
 
 CREATE DATABASE IF NOT EXISTS qlbenhnhan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE qlbenhnhan;
@@ -98,9 +91,6 @@ CREATE TABLE toathuoc_chitiet (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. Bảng Hóa đơn viện phí
--- Ràng buộc 1 - 1 với Phiếu khám: mapk UNIQUE
--- Chuẩn hóa 3NF: Loại bỏ mabn (phụ thuộc bắc cầu qua phieukham)
--- Toàn bộ NOT NULL để minh bạch hóa tài chính
 CREATE TABLE hoadon_vienphi (
     mahd VARCHAR(20) PRIMARY KEY,
     mapk VARCHAR(20) NOT NULL UNIQUE,
