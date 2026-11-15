@@ -23,6 +23,11 @@ cd /d "%~dp0.."
 git restore .
 git clean -fd
 
+if exist "..\QuanLyBenhNhan_SAO_LUU_GOC\QLBN.py" (
+    copy /Y "..\QuanLyBenhNhan_SAO_LUU_GOC\QLBN.py" "src\QLBN.py" >nul 2>&1
+    copy /Y "..\QuanLyBenhNhan_SAO_LUU_GOC\DatabaseQLBN.py" "src\DatabaseQLBN.py" >nul 2>&1
+)
+
 echo.
 echo =====================================================================
 echo [THÀNH CÔNG] Toàn bộ code đã được khôi phục về trạng thái chuẩn ban đầu!
