@@ -1652,7 +1652,7 @@ class QuanLyBenhNhanApp:
         # KHỐI TRÁI: DANH SÁCH PHIẾU KHÁM CẦN THANH TOÁN
         frame_left = tk.LabelFrame(paned, text=" Danh sách Phiếu khám ", font=("Times New Roman", 12, "bold"),
                                    fg="#0F766E", bg="#FFFFFF", padx=10, pady=10)
-        paned.add(frame_left, minsize=420)
+        paned.add(frame_left, minsize=520, width=530)
 
         f_filter = tk.Frame(frame_left, bg="#FFFFFF")
         f_filter.pack(fill="x", pady=(0, 5))
@@ -1673,11 +1673,11 @@ class QuanLyBenhNhanApp:
         self.bill_tree_queue.heading("ngaykham", text="Ngày khám")
         self.bill_tree_queue.heading("trangthai", text="Trạng thái")
 
-        self.bill_tree_queue.column("mapk", width=70, anchor="center")
-        self.bill_tree_queue.column("mabn", width=65, anchor="center")
-        self.bill_tree_queue.column("hoten", width=125)
-        self.bill_tree_queue.column("ngaykham", width=110, anchor="center")
-        self.bill_tree_queue.column("trangthai", width=95, anchor="center")
+        self.bill_tree_queue.column("mapk", width=75, anchor="center")
+        self.bill_tree_queue.column("mabn", width=70, anchor="center")
+        self.bill_tree_queue.column("hoten", width=140)
+        self.bill_tree_queue.column("ngaykham", width=115, anchor="center")
+        self.bill_tree_queue.column("trangthai", width=100, anchor="center")
 
         self.bill_tree_queue.pack(fill="both", expand=True)
         self.bill_tree_queue.bind("<<TreeviewSelect>>", self.bill_on_select_queue)
@@ -1685,7 +1685,7 @@ class QuanLyBenhNhanApp:
         # KHỐI PHẢI: CHI TIẾT THANH TOÁN & HÓA ĐƠN
         frame_right = tk.LabelFrame(paned, text=" Chi tiết Viện phí & Quyết toán ", font=("Times New Roman", 12, "bold"),
                                     fg="#0284C7", bg="#FFFFFF", padx=15, pady=10)
-        paned.add(frame_right, minsize=600)
+        paned.add(frame_right, minsize=550)
 
         # Thông tin bệnh nhân & phiếu khám
         f_info = tk.Frame(frame_right, bg="#F0FDFA", padx=12, pady=8, highlightbackground="#0D9488", highlightthickness=1)
