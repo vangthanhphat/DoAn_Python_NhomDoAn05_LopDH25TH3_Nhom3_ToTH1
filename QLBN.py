@@ -861,7 +861,10 @@ class QuanLyBenhNhanApp:
         # KHỐI TRÁI: THÔNG TIN KHÁM VÀ BỆNH ÁN
         frame_left = tk.LabelFrame(paned, text=" Tiếp nhận & Khám lâm sàng ", font=("Times New Roman", 12, "bold"),
                                    fg="#0F766E", bg="#FFFFFF", padx=12, pady=10)
-        paned.add(frame_left, minsize=480)
+        paned.add(frame_left, minsize=530)
+
+        frame_left.grid_columnconfigure(1, weight=1)
+        frame_left.grid_columnconfigure(3, weight=1)
 
         self.ex_mapk = tk.StringVar()
         self.ex_mabn = tk.StringVar()
@@ -873,20 +876,20 @@ class QuanLyBenhNhanApp:
 
         # Dòng 0: Mã phiếu khám & Chọn Bệnh nhân
         tk.Label(frame_left, text="Mã phiếu (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=0, sticky="w", pady=4)
-        tk.Entry(frame_left, textvariable=self.ex_mapk, font=("Times New Roman", 11), width=14, relief="solid", bd=1).grid(row=0, column=1, sticky="w", padx=5, ipady=4)
+        tk.Entry(frame_left, textvariable=self.ex_mapk, font=("Times New Roman", 11), width=10, relief="solid", bd=1).grid(row=0, column=1, sticky="we", padx=5, ipady=4)
 
         tk.Label(frame_left, text="Bệnh nhân (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=2, sticky="w", pady=4)
-        self.cbb_ex_patient = ttk.Combobox(frame_left, width=28, state="readonly", postcommand=self.ex_reload_patients)
+        self.cbb_ex_patient = ttk.Combobox(frame_left, width=20, state="readonly", postcommand=self.ex_reload_patients)
         self.cbb_ex_patient.grid(row=0, column=3, sticky="we", padx=5, ipady=3)
         self.cbb_ex_patient.bind("<<ComboboxSelected>>", self.ex_on_patient_selected)
 
         # Dòng 1: Bác sĩ & Khoa khám
         tk.Label(frame_left, text="Bác sĩ khám:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=0, sticky="w", pady=4)
-        self.cbb_ex_doctor = ttk.Combobox(frame_left, textvariable=self.ex_bacsi, width=24, state="readonly")
+        self.cbb_ex_doctor = ttk.Combobox(frame_left, textvariable=self.ex_bacsi, width=18, state="readonly")
         self.cbb_ex_doctor.grid(row=1, column=1, sticky="we", padx=5, ipady=3)
 
         tk.Label(frame_left, text="Khoa phòng:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=2, sticky="w", pady=4)
-        self.cbb_ex_khoa = ttk.Combobox(frame_left, textvariable=self.ex_khoa, width=28, state="readonly")
+        self.cbb_ex_khoa = ttk.Combobox(frame_left, textvariable=self.ex_khoa, width=20, state="readonly")
         self.cbb_ex_khoa.grid(row=1, column=3, sticky="we", padx=5, ipady=3)
 
         # Dòng 2: Dấu hiệu sinh tồn (Huyết áp, Nhịp tim, Cân nặng)
@@ -955,23 +958,24 @@ class QuanLyBenhNhanApp:
         # KHỐI PHẢI: KÊ ĐƠN THUỐC ĐIỆN TỬ
         frame_right = tk.LabelFrame(paned, text=" Đơn Thuốc Điện Tử ", font=("Times New Roman", 12, "bold"),
                                     fg="#0284C7", bg="#FFFFFF", padx=12, pady=10)
-        paned.add(frame_right, minsize=550)
+        paned.add(frame_right, minsize=480)
 
         # Khung chọn thuốc từ kho
         f_rx_select = tk.Frame(frame_right, bg="#FFFFFF")
         f_rx_select.pack(fill="x", pady=(0, 5))
+        f_rx_select.grid_columnconfigure(1, weight=1)
 
         tk.Label(f_rx_select, text="Chọn thuốc (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=0, sticky="w")
-        self.cbb_rx_drug = ttk.Combobox(f_rx_select, width=35, state="readonly")
+        self.cbb_rx_drug = ttk.Combobox(f_rx_select, width=26, state="readonly")
         self.cbb_rx_drug.grid(row=0, column=1, padx=5, pady=3, sticky="we", ipady=3)
 
         tk.Label(f_rx_select, text="Số lượng (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=2, sticky="w")
         self.rx_qty_var = tk.StringVar(value="1")
-        tk.Entry(f_rx_select, textvariable=self.rx_qty_var, font=("Times New Roman", 11), width=8, relief="solid", bd=1).grid(row=0, column=3, padx=5, pady=3, sticky="w", ipady=3)
+        tk.Entry(f_rx_select, textvariable=self.rx_qty_var, font=("Times New Roman", 11), width=6, relief="solid", bd=1).grid(row=0, column=3, padx=5, pady=3, sticky="w", ipady=3)
 
         tk.Label(f_rx_select, text="Cách dùng / Liều:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=0, sticky="w")
         self.rx_instruction_var = tk.StringVar(value="Uống 1 viên x 2 lần/ngày sau ăn")
-        tk.Entry(f_rx_select, textvariable=self.rx_instruction_var, font=("Times New Roman", 11), width=35, relief="solid", bd=1).grid(row=1, column=1, columnspan=2, padx=5, pady=3, sticky="we", ipady=3)
+        tk.Entry(f_rx_select, textvariable=self.rx_instruction_var, font=("Times New Roman", 11), width=26, relief="solid", bd=1).grid(row=1, column=1, columnspan=2, padx=5, pady=3, sticky="we", ipady=3)
 
         btn_add_drug = tk.Button(f_rx_select, text="➕ Thêm thuốc", font=("Times New Roman", 10, "bold"), bg="#0284C7", fg="white",
                                  relief="flat", cursor="hand2", command=self.rx_action_add_drug)
