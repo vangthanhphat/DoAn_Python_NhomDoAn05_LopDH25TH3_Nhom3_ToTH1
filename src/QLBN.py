@@ -86,10 +86,6 @@ class LoginWindow:
                             cursor="hand2", relief="flat", command=self.open_register_window)
         btn_reg.pack(fill="x", ipady=4, pady=(0, 6))
 
-        btn_exit = tk.Button(btn_frame, text="THOÁT", font=("Times New Roman", 11, "bold"), bg="#EF4444", fg="white",
-                             cursor="hand2", relief="flat", command=self.root.destroy)
-        btn_exit.pack(fill="x", ipady=4)
-
         # Gợi ý tài khoản demo
         lbl_hint = tk.Label(main_frame, text="Tài khoản: admin | bsminh | dsanh | ttphat | tntriet (MK: 123)",
                             font=("Times New Roman", 10, "italic"), fg="#64748B", bg="#FFFFFF")
