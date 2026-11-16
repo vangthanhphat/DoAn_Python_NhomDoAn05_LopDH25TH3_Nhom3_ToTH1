@@ -457,21 +457,23 @@ class ExamTabHandler:
         if docs:
             self.cbb_ex_doctor.set(list(self.doctors_cache.keys())[0])
 
-        # Khoa phòng
-        cur.execute("SELECT makhoa, tenkhoa FROM khoaphong ORDER BY makhoa ASC")
+        # Khoa phòng phân theo Khám nội / Khám ngoại
+        if self.loai_kham == "Khám nội":
+            # Khoa nội: K02 - Khoa Nội Tổng Hợp, K06 - Khoa Tim Mạch, K04 - Khoa Nhi
+            cur.execute("SELECT makhoa, tenkhoa FROM khoaphong WHERE makhoa IN ('K02', 'K06', 'K04') ORDER BY FIELD(makhoa, 'K02', 'K06', 'K04')")
+        else:
+            # Khoa ngoại: K03 - Khoa Ngoại Tổng Quát, K05 - Khoa Tai Mũi Họng, K01 - Khoa Khám Bệnh
+            cur.execute("SELECT makhoa, tenkhoa FROM khoaphong WHERE makhoa IN ('K03', 'K05', 'K01') ORDER BY FIELD(makhoa, 'K03', 'K05', 'K01')")
         khoas = cur.fetchall()
         self.khoas_cache = {f"{r[0]} - {r[1]}": r[0] for r in khoas}
         self.cbb_ex_khoa["values"] = list(self.khoas_cache.keys())
         if khoas:
-            default_k = list(self.khoas_cache.keys())[0]
-            for k in self.khoas_cache.keys():
-                if self.loai_kham == "Khám nội" and "Nội" in k:
-                    default_k = k
-                    break
-                elif self.loai_kham == "Khám ngoại" and "Ngoại" in k:
-                    default_k = k
-                    break
-            self.cbb_ex_khoa.set(default_k)
+            first_khoa = list(self.khoas_cache.keys())[0]
+            self.cbb_ex_khoa.set(first_khoa)
+            self.ex_khoa.set(self.khoas_cache[first_khoa])
+        else:
+            self.cbb_ex_khoa.set("")
+            self.ex_khoa.set("")
 
         # Thuốc
         cur.execute("SELECT mathuoc, tenthuoc, donvitinh, dongia, soluongton FROM thuoc WHERE soluongton > 0 ORDER BY tenthuoc ASC")
@@ -607,6 +609,8 @@ class ExamTabHandler:
             self.ex_mabn.set("")
             if hasattr(self, "cbb_ex_patient"):
                 self.cbb_ex_patient.set("")
+        if hasattr(self, "cbb_ex_khoa") and self.cbb_ex_khoa["values"]:
+            self.cbb_ex_khoa.set(self.cbb_ex_khoa["values"][0])
         self.txt_ex_trieuchung.delete("1.0", tk.END)
         self.txt_ex_chandoan.delete("1.0", tk.END)
         self.txt_ex_ketluan.delete("1.0", tk.END)
