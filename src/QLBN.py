@@ -224,6 +224,556 @@ class LoginWindow:
 
 
 # ==============================================================================
+# CLASS PHÂN HỆ KHÁM BỆNH & TOA THUỐC (TÁCH BIỆT: KHÁM NỘI / KHÁM NGOẠI)
+# ==============================================================================
+class ExamTabHandler:
+    """Quản lý độc lập từng phân hệ Khám bệnh & Kê đơn thuốc (Khám nội / Khám ngoại)"""
+    def __init__(self, app, parent, loai_kham="Khám nội"):
+        self.app = app
+        self.root = app.root
+        self.parent = parent
+        self.loai_kham = loai_kham  # "Khám nội" hoặc "Khám ngoại"
+        self.patients_cache = {}
+        self.doctors_cache = {}
+        self.khoas_cache = {}
+        self.drugs_cache = {}
+
+        self.build_ui()
+
+    def build_ui(self):
+        paned = tk.PanedWindow(self.parent, orient="horizontal", bg="#F8FAFC", sashrelief="raised", sashwidth=4)
+        paned.pack(fill="both", expand=True, padx=5, pady=5)
+
+        title_left = f" Tiếp nhận & {self.loai_kham} "
+        title_right = f" Đơn Thuốc {self.loai_kham} "
+
+        # KHỐI TRÁI: THÔNG TIN KHÁM VÀ BỆNH ÁN
+        frame_left = tk.LabelFrame(paned, text=title_left, font=("Times New Roman", 12, "bold"),
+                                   fg="#0F766E", bg="#FFFFFF", padx=12, pady=10)
+        paned.add(frame_left, minsize=530)
+
+        frame_left.grid_columnconfigure(1, weight=1)
+        frame_left.grid_columnconfigure(3, weight=1)
+
+        self.ex_mapk = tk.StringVar()
+        self.ex_mabn = tk.StringVar()
+        self.ex_bacsi = tk.StringVar()
+        self.ex_khoa = tk.StringVar()
+        self.ex_huyetap = tk.StringVar(value="120/80")
+        self.ex_nhiptim = tk.StringVar(value="75")
+        self.ex_cannang = tk.StringVar(value="60.0")
+
+        # Dòng 0: Mã phiếu khám & Chọn Bệnh nhân
+        tk.Label(frame_left, text="Mã phiếu (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=0, sticky="w", pady=4)
+        tk.Entry(frame_left, textvariable=self.ex_mapk, font=("Times New Roman", 11), width=10, relief="solid", bd=1).grid(row=0, column=1, sticky="we", padx=5, ipady=4)
+
+        lbl_bn = f"Bệnh nhân ({self.loai_kham}) (*):"
+        tk.Label(frame_left, text=lbl_bn, font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=2, sticky="w", pady=4)
+        self.cbb_ex_patient = ttk.Combobox(frame_left, width=20, state="readonly", postcommand=self.reload_patients)
+        self.cbb_ex_patient.grid(row=0, column=3, sticky="we", padx=5, ipady=3)
+        self.cbb_ex_patient.bind("<<ComboboxSelected>>", self.on_patient_selected)
+
+        # Dòng 1: Bác sĩ & Khoa khám
+        tk.Label(frame_left, text="Bác sĩ khám:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=0, sticky="w", pady=4)
+        self.cbb_ex_doctor = ttk.Combobox(frame_left, textvariable=self.ex_bacsi, width=18, state="readonly")
+        self.cbb_ex_doctor.grid(row=1, column=1, sticky="we", padx=5, ipady=3)
+
+        tk.Label(frame_left, text="Khoa phòng:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=2, sticky="w", pady=4)
+        self.cbb_ex_khoa = ttk.Combobox(frame_left, textvariable=self.ex_khoa, width=20, state="readonly")
+        self.cbb_ex_khoa.grid(row=1, column=3, sticky="we", padx=5, ipady=3)
+
+        # Dòng 2: Dấu hiệu sinh tồn (Huyết áp, Nhịp tim, Cân nặng)
+        f_vitals = tk.LabelFrame(frame_left, text=" Dấu hiệu sinh tồn ", font=("Times New Roman", 10, "bold"), bg="#F0FDFA", fg="#0D9488", padx=5, pady=4)
+        f_vitals.grid(row=2, column=0, columnspan=4, sticky="we", pady=6)
+
+        tk.Label(f_vitals, text="Huyết áp (mmHg):", font=("Times New Roman", 10), bg="#F0FDFA").pack(side="left", padx=2)
+        tk.Entry(f_vitals, textvariable=self.ex_huyetap, font=("Times New Roman", 10), width=9, relief="solid", bd=1).pack(side="left", padx=(0, 10), ipady=2)
+
+        tk.Label(f_vitals, text="Nhịp tim (l/p):", font=("Times New Roman", 10), bg="#F0FDFA").pack(side="left", padx=2)
+        tk.Entry(f_vitals, textvariable=self.ex_nhiptim, font=("Times New Roman", 10), width=7, relief="solid", bd=1).pack(side="left", padx=(0, 10), ipady=2)
+
+        tk.Label(f_vitals, text="Cân nặng (kg):", font=("Times New Roman", 10), bg="#F0FDFA").pack(side="left", padx=2)
+        tk.Entry(f_vitals, textvariable=self.ex_cannang, font=("Times New Roman", 10), width=7, relief="solid", bd=1).pack(side="left", ipady=2)
+
+        # Dòng 3: Triệu chứng lâm sàng
+        tk.Label(frame_left, text="Triệu chứng:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=3, column=0, sticky="nw", pady=4)
+        self.txt_ex_trieuchung = tk.Text(frame_left, height=2, font=("Times New Roman", 11), padx=6, pady=4, wrap="word", relief="solid", bd=1)
+        self.txt_ex_trieuchung.grid(row=3, column=1, columnspan=3, sticky="we", padx=5, pady=2)
+
+        # Dòng 4: Chẩn đoán
+        tk.Label(frame_left, text="Chẩn đoán (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=4, column=0, sticky="nw", pady=4)
+        self.txt_ex_chandoan = tk.Text(frame_left, height=2, font=("Times New Roman", 11), padx=6, pady=4, wrap="word", relief="solid", bd=1)
+        self.txt_ex_chandoan.grid(row=4, column=1, columnspan=3, sticky="we", padx=5, pady=2)
+
+        # Dòng 5: Lời dặn / Kết luận
+        tk.Label(frame_left, text="Lời dặn bác sĩ:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=5, column=0, sticky="nw", pady=4)
+        self.txt_ex_ketluan = tk.Text(frame_left, height=2, font=("Times New Roman", 11), padx=6, pady=4, wrap="word", relief="solid", bd=1)
+        self.txt_ex_ketluan.grid(row=5, column=1, columnspan=3, sticky="we", padx=5, pady=2)
+
+        # Nút thao tác phiếu khám
+        f_ex_btn = tk.Frame(frame_left, bg="#FFFFFF")
+        f_ex_btn.grid(row=6, column=0, columnspan=4, pady=(10, 5), sticky="we")
+
+        tk.Button(f_ex_btn, text="➕ Tạo phiếu mới", font=("Times New Roman", 11, "bold"), bg="#10B981", fg="white",
+                  relief="flat", cursor="hand2", command=self.action_new).pack(side="left", padx=3)
+        tk.Button(f_ex_btn, text="💾 Lưu Bệnh Án", font=("Times New Roman", 11, "bold"), bg="#0D9488", fg="white",
+                  relief="flat", cursor="hand2", command=self.action_save).pack(side="left", padx=3)
+        tk.Button(f_ex_btn, text="🗑️ Xóa Phiếu", font=("Times New Roman", 11, "bold"), bg="#EF4444", fg="white",
+                  relief="flat", cursor="hand2", command=self.action_delete).pack(side="left", padx=3)
+        tk.Button(f_ex_btn, text="🔄 Làm mới", font=("Times New Roman", 11), bg="#64748B", fg="white",
+                  relief="flat", cursor="hand2", command=self.action_clear).pack(side="left", padx=3)
+
+        # Bảng lịch sử khám gần đây
+        tk.Label(frame_left, text=f"DANH SÁCH PHIẾU {self.loai_kham.upper()} GẦN ĐÂY:", font=("Times New Roman", 11, "bold"), fg="#334155", bg="#FFFFFF").grid(row=7, column=0, columnspan=4, sticky="w", pady=(10, 2))
+
+        cols_hist = ("mapk", "mabn", "hoten", "ngaykham", "chandoan", "trangthai")
+        self.ex_tree_hist = ttk.Treeview(frame_left, columns=cols_hist, show="headings", height=6)
+        self.ex_tree_hist.heading("mapk", text="Mã PK")
+        self.ex_tree_hist.heading("mabn", text="Mã BN")
+        self.ex_tree_hist.heading("hoten", text="Họ tên BN")
+        self.ex_tree_hist.heading("ngaykham", text="Ngày khám")
+        self.ex_tree_hist.heading("chandoan", text="Chẩn đoán")
+        self.ex_tree_hist.heading("trangthai", text="Trạng thái")
+
+        self.ex_tree_hist.column("mapk", width=70, anchor="center")
+        self.ex_tree_hist.column("mabn", width=65, anchor="center")
+        self.ex_tree_hist.column("hoten", width=120)
+        self.ex_tree_hist.column("ngaykham", width=120, anchor="center")
+        self.ex_tree_hist.column("chandoan", width=130)
+        self.ex_tree_hist.column("trangthai", width=95, anchor="center")
+
+        self.ex_tree_hist.grid(row=8, column=0, columnspan=4, sticky="nsew")
+        self.ex_tree_hist.bind("<<TreeviewSelect>>", self.on_select_history)
+
+        # KHỐI PHẢI: KÊ ĐƠN THUỐC ĐIỆN TỬ
+        frame_right = tk.LabelFrame(paned, text=title_right, font=("Times New Roman", 12, "bold"),
+                                    fg="#0284C7", bg="#FFFFFF", padx=12, pady=10)
+        paned.add(frame_right, minsize=480)
+
+        # Khung chọn thuốc từ kho
+        f_rx_select = tk.Frame(frame_right, bg="#FFFFFF")
+        f_rx_select.pack(fill="x", pady=(0, 5))
+        f_rx_select.grid_columnconfigure(1, weight=1)
+
+        tk.Label(f_rx_select, text="Chọn thuốc (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=0, sticky="w")
+        self.cbb_rx_drug = ttk.Combobox(f_rx_select, width=26, state="readonly")
+        self.cbb_rx_drug.grid(row=0, column=1, padx=5, pady=3, sticky="we", ipady=3)
+
+        tk.Label(f_rx_select, text="Số lượng (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=2, sticky="w")
+        self.rx_qty_var = tk.StringVar(value="1")
+        tk.Entry(f_rx_select, textvariable=self.rx_qty_var, font=("Times New Roman", 11), width=6, relief="solid", bd=1).grid(row=0, column=3, padx=5, pady=3, sticky="w", ipady=3)
+
+        tk.Label(f_rx_select, text="Cách dùng / Liều:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=0, sticky="w")
+        self.rx_instruction_var = tk.StringVar(value="Uống 1 viên x 2 lần/ngày sau ăn")
+        tk.Entry(f_rx_select, textvariable=self.rx_instruction_var, font=("Times New Roman", 11), width=26, relief="solid", bd=1).grid(row=1, column=1, columnspan=2, padx=5, pady=3, sticky="we", ipady=3)
+
+        btn_add_drug = tk.Button(f_rx_select, text="➕ Thêm thuốc", font=("Times New Roman", 10, "bold"), bg="#0284C7", fg="white",
+                                 relief="flat", cursor="hand2", command=self.rx_action_add_drug)
+        btn_add_drug.grid(row=1, column=3, padx=5, pady=3, sticky="we")
+
+        # Bảng hiển thị danh sách thuốc đã kê
+        cols_rx = ("mathuoc", "tenthuoc", "donvitinh", "soluong", "dongia", "thanhtien", "cachdung")
+        self.rx_tree = ttk.Treeview(frame_right, columns=cols_rx, show="headings", height=12)
+        self.rx_tree.heading("mathuoc", text="Mã")
+        self.rx_tree.heading("tenthuoc", text="Tên thuốc")
+        self.rx_tree.heading("donvitinh", text="ĐVT")
+        self.rx_tree.heading("soluong", text="SL")
+        self.rx_tree.heading("dongia", text="Đơn giá")
+        self.rx_tree.heading("thanhtien", text="Thành tiền")
+        self.rx_tree.heading("cachdung", text="Cách dùng")
+
+        self.rx_tree.column("mathuoc", width=55, anchor="center")
+        self.rx_tree.column("tenthuoc", width=140)
+        self.rx_tree.column("donvitinh", width=50, anchor="center")
+        self.rx_tree.column("soluong", width=45, anchor="center")
+        self.rx_tree.column("dongia", width=80, anchor="e")
+        self.rx_tree.column("thanhtien", width=85, anchor="e")
+        self.rx_tree.column("cachdung", width=160)
+
+        self.rx_tree.pack(fill="both", expand=True, pady=5)
+
+        # Thanh tổng cộng & nút xóa thuốc
+        f_rx_bottom = tk.Frame(frame_right, bg="#FFFFFF")
+        f_rx_bottom.pack(fill="x", pady=5)
+
+        btn_del_drug = tk.Button(f_rx_bottom, text="❌ Xóa thuốc chọn", font=("Times New Roman", 10, "bold"), bg="#EF4444", fg="white",
+                                 relief="flat", cursor="hand2", command=self.rx_action_remove_drug)
+        btn_del_drug.pack(side="left")
+
+        self.lbl_rx_total = tk.Label(f_rx_bottom, text="Tổng tiền thuốc: 0 đ", font=("Times New Roman", 12, "bold"), fg="#DC2626", bg="#FFFFFF")
+        self.lbl_rx_total.pack(side="right")
+
+        # Nạp dữ liệu ban đầu
+        self.load_comboboxes()
+        self.load_history()
+
+    def reload_patients(self):
+        """Tự động làm mới danh sách bệnh nhân phù hợp với phân loại Khám nội / Khám ngoại"""
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT mabn, holot, ten FROM benhnhan WHERE loaikham = %s ORDER BY mabn ASC", (self.loai_kham,))
+            rows = cur.fetchall()
+            conn.close()
+            self.patients_cache = {f"{r[0]} - {r[1]} {r[2]}": r[0] for r in rows}
+            self.cbb_ex_patient["values"] = list(self.patients_cache.keys())
+            curr = self.cbb_ex_patient.get().strip()
+            if curr in self.patients_cache:
+                self.ex_mabn.set(self.patients_cache[curr])
+            elif " - " in curr:
+                self.ex_mabn.set(curr.split(" - ")[0].strip())
+            elif rows and not curr:
+                first_val = list(self.patients_cache.keys())[0]
+                self.cbb_ex_patient.set(first_val)
+                self.ex_mabn.set(self.patients_cache[first_val])
+        except Exception:
+            pass
+
+    def load_comboboxes(self):
+        conn = get_connection()
+        if not conn:
+            return
+        cur = conn.cursor()
+        # Bệnh nhân theo Loại khám
+        cur.execute("SELECT mabn, holot, ten FROM benhnhan WHERE loaikham = %s ORDER BY mabn ASC", (self.loai_kham,))
+        rows = cur.fetchall()
+        self.patients_cache = {f"{r[0]} - {r[1]} {r[2]}": r[0] for r in rows}
+        self.cbb_ex_patient["values"] = list(self.patients_cache.keys())
+        if rows:
+            first_val = list(self.patients_cache.keys())[0]
+            self.cbb_ex_patient.set(first_val)
+            self.ex_mabn.set(self.patients_cache[first_val])
+        else:
+            self.cbb_ex_patient.set("")
+            self.ex_mabn.set("")
+
+        # Bác sĩ
+        cur.execute("SELECT manv, hoten FROM nhanvien WHERE vaitro='Bác sĩ' OR vaitro='Admin' ORDER BY hoten ASC")
+        docs = cur.fetchall()
+        self.doctors_cache = {f"{r[0]} - {r[1]}": r[0] for r in docs}
+        self.cbb_ex_doctor["values"] = list(self.doctors_cache.keys())
+        if docs:
+            self.cbb_ex_doctor.set(list(self.doctors_cache.keys())[0])
+
+        # Khoa phòng
+        cur.execute("SELECT makhoa, tenkhoa FROM khoaphong ORDER BY makhoa ASC")
+        khoas = cur.fetchall()
+        self.khoas_cache = {f"{r[0]} - {r[1]}": r[0] for r in khoas}
+        self.cbb_ex_khoa["values"] = list(self.khoas_cache.keys())
+        if khoas:
+            default_k = list(self.khoas_cache.keys())[0]
+            for k in self.khoas_cache.keys():
+                if self.loai_kham == "Khám nội" and "Nội" in k:
+                    default_k = k
+                    break
+                elif self.loai_kham == "Khám ngoại" and "Ngoại" in k:
+                    default_k = k
+                    break
+            self.cbb_ex_khoa.set(default_k)
+
+        # Thuốc
+        cur.execute("SELECT mathuoc, tenthuoc, donvitinh, dongia, soluongton FROM thuoc WHERE soluongton > 0 ORDER BY tenthuoc ASC")
+        drugs = cur.fetchall()
+        self.drugs_cache = {f"{r[0]} | {r[1]} ({r[2]}) - {int(r[3]):,}đ [Tồn: {r[4]}]": {
+            "mathuoc": r[0], "tenthuoc": r[1], "donvitinh": r[2], "dongia": float(r[3]), "soluongton": r[4]
+        } for r in drugs}
+        self.cbb_rx_drug["values"] = list(self.drugs_cache.keys())
+        if drugs:
+            self.cbb_rx_drug.set(list(self.drugs_cache.keys())[0])
+
+        conn.close()
+
+    def on_patient_selected(self, event=None):
+        val = self.cbb_ex_patient.get().strip()
+        if val in self.patients_cache:
+            self.ex_mabn.set(self.patients_cache[val])
+        elif " - " in val:
+            self.ex_mabn.set(val.split(" - ")[0].strip())
+        elif val:
+            self.ex_mabn.set(val)
+
+    def load_history(self):
+        for r in self.ex_tree_hist.get_children():
+            self.ex_tree_hist.delete(r)
+        conn = get_connection()
+        if not conn:
+            return
+        cur = conn.cursor()
+        sql = """
+            SELECT pk.mapk, pk.mabn, CONCAT(bn.holot, ' ', bn.ten) as hoten, pk.ngaykham, pk.chandoan, pk.trangthai
+            FROM phieukham pk
+            JOIN benhnhan bn ON pk.mabn = bn.mabn
+            WHERE bn.loaikham = %s
+            ORDER BY pk.ngaykham DESC LIMIT 30
+        """
+        cur.execute(sql, (self.loai_kham,))
+        for row in cur.fetchall():
+            nk = row[3].strftime("%d/%m/%Y %H:%M") if row[3] else ""
+            self.ex_tree_hist.insert("", "end", values=(row[0], row[1], row[2], nk, row[4], row[5]))
+        conn.close()
+
+    def on_select_history(self, event):
+        sel = self.ex_tree_hist.selection()
+        if not sel:
+            return
+        mapk = self.ex_tree_hist.item(sel[0])["values"][0]
+        conn = get_connection()
+        if not conn:
+            return
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT mapk, mabn, manv_bacsi, makhoa, ngaykham, trieuchung, huyetap, nhiptim, cannang, chandoan, ketluan, trangthai
+            FROM phieukham WHERE mapk=%s
+        """, (mapk,))
+        row = cur.fetchone()
+        if row:
+            self.ex_mapk.set(row[0])
+            self.ex_mabn.set(row[1])
+            # Set combobox bệnh nhân
+            for k, v in self.patients_cache.items():
+                if v == row[1]:
+                    self.cbb_ex_patient.set(k)
+                    break
+            # Set combobox bác sĩ
+            for k, v in self.doctors_cache.items():
+                if v == row[2]:
+                    self.cbb_ex_doctor.set(k)
+                    break
+            # Set combobox khoa
+            for k, v in self.khoas_cache.items():
+                if v == row[3]:
+                    self.cbb_ex_khoa.set(k)
+                    break
+
+            self.txt_ex_trieuchung.delete("1.0", tk.END)
+            self.txt_ex_trieuchung.insert("1.0", row[5] or "")
+
+            self.ex_huyetap.set(row[6] or "120/80")
+            self.ex_nhiptim.set(str(row[7] or 75))
+            self.ex_cannang.set(str(row[8] or 60.0))
+
+            self.txt_ex_chandoan.delete("1.0", tk.END)
+            self.txt_ex_chandoan.insert("1.0", row[9] or "")
+
+            self.txt_ex_ketluan.delete("1.0", tk.END)
+            self.txt_ex_ketluan.insert("1.0", row[10] or "")
+
+            # Nạp lại danh sách thuốc đã kê của phiếu khám này
+            self.rx_load_prescription(mapk)
+
+        conn.close()
+
+    def rx_load_prescription(self, mapk):
+        for r in self.rx_tree.get_children():
+            self.rx_tree.delete(r)
+        conn = get_connection()
+        if not conn:
+            return
+        cur = conn.cursor()
+        cur.execute("SELECT mathuoc, tenthuoc, donvitinh, soluong, dongia, thanhtien, cachdung FROM toathuoc_chitiet WHERE mapk=%s", (mapk,))
+        total = 0
+        for r in cur.fetchall():
+            self.rx_tree.insert("", "end", values=(r[0], r[1], r[2], r[3], f"{int(r[4]):,}đ", f"{int(r[5]):,}đ", r[6]))
+            total += float(r[5])
+        self.lbl_rx_total.config(text=f"Tổng tiền thuốc: {int(total):,} đ")
+        conn.close()
+
+    def action_new(self):
+        self.action_clear()
+        conn = get_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("SELECT mapk FROM phieukham WHERE mapk LIKE 'PK%' ORDER BY LENGTH(mapk) DESC, mapk DESC LIMIT 1")
+            row = cur.fetchone()
+            conn.close()
+            if row and row[0].startswith("PK"):
+                try:
+                    num = int(row[0][2:]) + 1
+                    self.ex_mapk.set(f"PK{num:03d}")
+                except Exception:
+                    self.ex_mapk.set("PK001")
+            else:
+                self.ex_mapk.set("PK001")
+
+    def action_clear(self):
+        self.ex_mapk.set("")
+        if hasattr(self, "cbb_ex_patient") and self.cbb_ex_patient["values"]:
+            first_val = self.cbb_ex_patient["values"][0]
+            self.cbb_ex_patient.set(first_val)
+            self.ex_mabn.set(self.patients_cache.get(first_val, first_val.split(" - ")[0].strip()))
+        else:
+            self.ex_mabn.set("")
+            if hasattr(self, "cbb_ex_patient"):
+                self.cbb_ex_patient.set("")
+        self.txt_ex_trieuchung.delete("1.0", tk.END)
+        self.txt_ex_chandoan.delete("1.0", tk.END)
+        self.txt_ex_ketluan.delete("1.0", tk.END)
+        for r in self.rx_tree.get_children():
+            self.rx_tree.delete(r)
+        self.lbl_rx_total.config(text="Tổng tiền thuốc: 0 đ")
+
+    def rx_action_add_drug(self):
+        drug_label = self.cbb_rx_drug.get()
+        if drug_label not in self.drugs_cache:
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn thuốc hợp lệ từ danh mục!", parent=self.root)
+            return
+        drug_info = self.drugs_cache[drug_label]
+
+        try:
+            qty = int(self.rx_qty_var.get().strip())
+            if qty <= 0:
+                raise ValueError()
+        except ValueError:
+            messagebox.showwarning("Cảnh báo", "Số lượng thuốc phải là số nguyên dương!", parent=self.root)
+            return
+
+        if qty > drug_info["soluongton"]:
+            messagebox.showwarning("Hết hàng", f"Số lượng thuốc tồn kho chỉ còn {drug_info['soluongton']} {drug_info['donvitinh']}!", parent=self.root)
+            return
+
+        instruction = self.rx_instruction_var.get().strip()
+        thanhtien = qty * drug_info["dongia"]
+
+        for child in self.rx_tree.get_children():
+            if self.rx_tree.item(child)["values"][0] == drug_info["mathuoc"]:
+                messagebox.showwarning("Thông báo", "Thuốc này đã có trong toa, hãy xóa dòng cũ trước nếu muốn sửa số lượng!", parent=self.root)
+                return
+
+        self.rx_tree.insert("", "end", values=(
+            drug_info["mathuoc"], drug_info["tenthuoc"], drug_info["donvitinh"],
+            qty, f"{int(drug_info['dongia']):,}đ", f"{int(thanhtien):,}đ", instruction
+        ))
+        self.rx_calculate_total()
+
+    def rx_action_remove_drug(self):
+        sel = self.rx_tree.selection()
+        if not sel:
+            messagebox.showwarning("Chưa chọn", "Vui lòng chọn dòng thuốc muốn xóa khỏi toa!", parent=self.root)
+            return
+        self.rx_tree.delete(sel[0])
+        self.rx_calculate_total()
+
+    def rx_calculate_total(self):
+        total = 0
+        for child in self.rx_tree.get_children():
+            val = self.rx_tree.item(child)["values"][5]
+            clean_val = str(val).replace(",", "").replace("đ", "").strip()
+            total += float(clean_val)
+        self.lbl_rx_total.config(text=f"Tổng tiền thuốc: {int(total):,} đ")
+
+    def action_save(self):
+        mapk = self.ex_mapk.get().strip()
+        mabn = self.ex_mabn.get().strip()
+        cbb_p_val = self.cbb_ex_patient.get().strip()
+        if not mabn and cbb_p_val:
+            if cbb_p_val in self.patients_cache:
+                mabn = self.patients_cache[cbb_p_val]
+            elif " - " in cbb_p_val:
+                mabn = cbb_p_val.split(" - ")[0].strip()
+            else:
+                mabn = cbb_p_val
+            self.ex_mabn.set(mabn)
+
+        doc_label = self.cbb_ex_doctor.get().strip()
+        khoa_label = self.cbb_ex_khoa.get().strip()
+        trieuchung = self.txt_ex_trieuchung.get("1.0", tk.END).strip()
+        chandoan = self.txt_ex_chandoan.get("1.0", tk.END).strip()
+        ketluan = self.txt_ex_ketluan.get("1.0", tk.END).strip()
+        huyetap = self.ex_huyetap.get().strip()
+
+        try:
+            nhiptim = int(self.ex_nhiptim.get().strip())
+            cannang = float(self.ex_cannang.get().strip())
+        except ValueError:
+            messagebox.showwarning("Sai định dạng", "Nhịp tim và cân nặng phải là số!", parent=self.root)
+            return
+
+        if not mapk or not mabn or not chandoan:
+            messagebox.showwarning("Thiếu dữ liệu", "Vui lòng nhập đầy đủ: Mã phiếu khám, Bệnh nhân và Chẩn đoán bệnh!", parent=self.root)
+            return
+
+        manv_bacsi = self.doctors_cache.get(doc_label)
+        if not manv_bacsi and " - " in doc_label:
+            manv_bacsi = doc_label.split(" - ")[0].strip()
+        if not manv_bacsi:
+            manv_bacsi = "NV01"
+
+        makhoa = self.khoas_cache.get(khoa_label)
+        if not makhoa and " - " in khoa_label:
+            makhoa = khoa_label.split(" - ")[0].strip()
+        if not makhoa:
+            makhoa = "K01"
+
+        ngaykham = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT mapk FROM phieukham WHERE mapk=%s", (mapk,))
+            exists = cur.fetchone()
+
+            if exists:
+                cur.execute("""
+                    UPDATE phieukham
+                    SET mabn=%s, manv_bacsi=%s, makhoa=%s, trieuchung=%s, huyetap=%s, nhiptim=%s, cannang=%s, chandoan=%s, ketluan=%s
+                    WHERE mapk=%s
+                """, (mabn, manv_bacsi, makhoa, trieuchung, huyetap, nhiptim, cannang, chandoan, ketluan, mapk))
+            else:
+                cur.execute("""
+                    INSERT INTO phieukham (mapk, mabn, manv_bacsi, makhoa, ngaykham, trieuchung, huyetap, nhiptim, cannang, chandoan, ketluan, trangthai)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Chờ thanh toán')
+                """, (mapk, mabn, manv_bacsi, makhoa, ngaykham, trieuchung, huyetap, nhiptim, cannang, chandoan, ketluan))
+
+            # Cập nhật chi tiết toa thuốc
+            cur.execute("DELETE FROM toathuoc_chitiet WHERE mapk=%s", (mapk,))
+            for child in self.rx_tree.get_children():
+                v = self.rx_tree.item(child)["values"]
+                mathuoc = v[0]
+                tenthuoc = v[1]
+                donvitinh = v[2]
+                soluong = int(v[3])
+                dongia = float(str(v[4]).replace(",", "").replace("đ", "").strip())
+                thanhtien = float(str(v[5]).replace(",", "").replace("đ", "").strip())
+                cachdung = v[6]
+
+                cur.execute("""
+                    INSERT INTO toathuoc_chitiet (mapk, mathuoc, tenthuoc, donvitinh, soluong, dongia, cachdung, thanhtien)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (mapk, mathuoc, tenthuoc, donvitinh, soluong, dongia, cachdung, thanhtien))
+
+            conn.commit()
+            conn.close()
+            messagebox.showinfo("Thành công", f"Đã lưu hồ sơ bệnh án và đơn thuốc cho phiếu khám [{mapk}]!", parent=self.root)
+            self.load_history()
+        except Exception as e:
+            messagebox.showerror("Lỗi CSDL", f"Lỗi khi lưu bệnh án:\n{e}", parent=self.root)
+
+    def action_delete(self):
+        mapk = self.ex_mapk.get().strip()
+        if not mapk:
+            messagebox.showwarning("Chưa chọn", "Vui lòng chọn phiếu khám cần xóa!", parent=self.root)
+            return
+        if messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa phiếu khám [{mapk}] cùng toàn bộ đơn thuốc liên quan?", parent=self.root):
+            conn = get_connection()
+            if not conn:
+                return
+            try:
+                cur = conn.cursor()
+                cur.execute("DELETE FROM phieukham WHERE mapk=%s", (mapk,))
+                conn.commit()
+                conn.close()
+                messagebox.showinfo("Thành công", f"Đã xóa thành công phiếu khám {mapk}!", parent=self.root)
+                self.action_clear()
+                self.load_history()
+            except Exception as e:
+                messagebox.showerror("Lỗi CSDL", f"Không thể xóa phiếu khám:\n{e}", parent=self.root)
+
+
+# ==============================================================================
 # CLASS ỨNG DỤNG CHÍNH: QUẢN LÝ BỆNH NHÂN (FULL TABS)
 # ==============================================================================
 class QuanLyBenhNhanApp:
@@ -374,11 +924,12 @@ class QuanLyBenhNhanApp:
     def show_user_guide(self):
         guide = (
             "HƯỚNG DẪN SỬ DỤNG NHANH:\n\n"
-            "1. Tab Bệnh nhân: Thêm, sửa, xóa, tìm kiếm hồ sơ và xuất Excel danh sách bệnh nhân.\n"
-            "2. Tab Khám bệnh: Tiếp nhận bệnh nhân, nhập dấu hiệu sinh tồn, chẩn đoán và kê đơn thuốc.\n"
-            "3. Tab Kho Dược: Quản lý danh mục thuốc, cập nhật giá, số lượng tồn kho và hạn sử dụng.\n"
-            "4. Tab Viện phí: Tự động tổng hợp chi phí khám và thuốc, giảm trừ BHYT và in hóa đơn viện phí.\n"
-            "5. Tab Thống kê: Xem các chỉ số tổng quan, biểu đồ doanh thu theo ngày và xuất báo cáo Excel."
+            "1. Tab Hồ sơ: Đăng ký, sửa, xóa, tìm kiếm bệnh nhân và phân luồng Khám nội / Khám ngoại.\n"
+            "2. Tab Khám Nội Khoa: Tiếp nhận khám lâm sàng và kê đơn cho bệnh nhân khám nội.\n"
+            "3. Tab Khám Ngoại Khoa: Tiếp nhận khám lâm sàng và kê đơn cho bệnh nhân khám ngoại.\n"
+            "4. Tab Kho Dược: Quản lý danh mục thuốc, cập nhật giá, số lượng tồn kho và hạn sử dụng.\n"
+            "5. Tab Viện phí: Tự động tổng hợp chi phí khám và thuốc, giảm trừ BHYT và in hóa đơn viện phí.\n"
+            "6. Tab Thống kê: Xem các chỉ số tổng quan, biểu đồ doanh thu theo ngày và xuất báo cáo Excel."
         )
         messagebox.showinfo("Hướng dẫn sử dụng", guide)
 
@@ -387,7 +938,8 @@ class QuanLyBenhNhanApp:
         self.tab_control = ttk.Notebook(self.root)
 
         tab_patient = tk.Frame(self.tab_control, bg="#F8FAFC")
-        tab_exam = tk.Frame(self.tab_control, bg="#F8FAFC")
+        tab_exam_noi = tk.Frame(self.tab_control, bg="#F8FAFC")
+        tab_exam_ngoai = tk.Frame(self.tab_control, bg="#F8FAFC")
         tab_pharmacy = tk.Frame(self.tab_control, bg="#F8FAFC")
         tab_billing = tk.Frame(self.tab_control, bg="#F8FAFC")
         tab_report = tk.Frame(self.tab_control, bg="#F8FAFC")
@@ -397,13 +949,15 @@ class QuanLyBenhNhanApp:
         # Phân quyền hiển thị Tab chuẩn mực theo từng vai trò nghiệp vụ:
         if vaitro == "Admin":
             self.tab_control.add(tab_patient, text="  📋 Hồ Sơ Bệnh Nhân  ")
-            self.tab_control.add(tab_exam, text="  🩺 Khám Bệnh & Toa Thuốc  ")
+            self.tab_control.add(tab_exam_noi, text="  🩺 Khám Nội Khoa  ")
+            self.tab_control.add(tab_exam_ngoai, text="  🩹 Khám Ngoại Khoa  ")
             self.tab_control.add(tab_pharmacy, text="  💊 Kho Dược Phẩm  ")
             self.tab_control.add(tab_billing, text="  💳 Viện Phí & Hóa Đơn  ")
             self.tab_control.add(tab_report, text="  📊 Báo Cáo Thống Kê  ")
 
             self.build_tab_patient(tab_patient)
-            self.build_tab_exam(tab_exam)
+            self.exam_handler_noi = ExamTabHandler(self, tab_exam_noi, loai_kham="Khám nội")
+            self.exam_handler_ngoai = ExamTabHandler(self, tab_exam_ngoai, loai_kham="Khám ngoại")
             self.build_tab_pharmacy(tab_pharmacy)
             self.build_tab_billing(tab_billing)
             self.build_tab_report(tab_report)
@@ -411,11 +965,13 @@ class QuanLyBenhNhanApp:
         elif vaitro == "Bác sĩ":
             # Bác sĩ: Khám bệnh, kê đơn và tra cứu tiền sử bệnh nhân + kho dược
             self.tab_control.add(tab_patient, text="  📋 Hồ Sơ Bệnh Nhân  ")
-            self.tab_control.add(tab_exam, text="  🩺 Khám Bệnh & Toa Thuốc  ")
+            self.tab_control.add(tab_exam_noi, text="  🩺 Khám Nội Khoa  ")
+            self.tab_control.add(tab_exam_ngoai, text="  🩹 Khám Ngoại Khoa  ")
             self.tab_control.add(tab_pharmacy, text="  💊 Tra Cứu Kho Dược  ")
 
             self.build_tab_patient(tab_patient)
-            self.build_tab_exam(tab_exam)
+            self.exam_handler_noi = ExamTabHandler(self, tab_exam_noi, loai_kham="Khám nội")
+            self.exam_handler_ngoai = ExamTabHandler(self, tab_exam_ngoai, loai_kham="Khám ngoại")
             self.build_tab_pharmacy(tab_pharmacy)
 
         elif vaitro == "Tiếp tân":
@@ -447,7 +1003,15 @@ class QuanLyBenhNhanApp:
         try:
             selected_tab = self.tab_control.select()
             tab_text = self.tab_control.tab(selected_tab, "text")
-            if "Khám Bệnh" in tab_text:
+            if "Khám Nội" in tab_text:
+                if hasattr(self, 'exam_handler_noi'):
+                    self.exam_handler_noi.load_comboboxes()
+                    self.exam_handler_noi.load_history()
+            elif "Khám Ngoại" in tab_text:
+                if hasattr(self, 'exam_handler_ngoai'):
+                    self.exam_handler_ngoai.load_comboboxes()
+                    self.exam_handler_ngoai.load_history()
+            elif "Khám Bệnh" in tab_text:
                 if hasattr(self, 'ex_load_comboboxes'):
                     self.ex_load_comboboxes()
                 if hasattr(self, 'ex_load_history'):
@@ -487,6 +1051,7 @@ class QuanLyBenhNhanApp:
         self.p_bhyt = tk.StringVar()
         self.p_nhommau = tk.StringVar(value="O")
         self.p_tiensu = tk.StringVar()
+        self.p_loaikham = tk.StringVar(value="Khám nội")
 
         # Cấu hình tỷ lệ các cột để form luôn cân đối và tự động co giãn theo kích thước cửa sổ
         frame_top.grid_columnconfigure(1, weight=2)
@@ -527,12 +1092,16 @@ class QuanLyBenhNhanApp:
         cbb_blood = ttk.Combobox(frame_top, textvariable=self.p_nhommau, values=["A", "B", "AB", "O"], state="readonly")
         cbb_blood.grid(row=1, column=7, sticky="we", padx=5, pady=5, ipady=2)
 
-        # Dòng 2: Mã BHYT và Địa chỉ cư trú (kéo dài rộng rãi)
+        # Dòng 2: Mã BHYT, Phân loại khám và Địa chỉ cư trú
         tk.Label(frame_top, text="Số thẻ BHYT:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=2, column=0, sticky="w", pady=5)
         tk.Entry(frame_top, textvariable=self.p_bhyt, font=("Times New Roman", 11), width=18, relief="solid", bd=1).grid(row=2, column=1, sticky="we", padx=(5, 15), pady=5, ipady=4)
 
-        tk.Label(frame_top, text="Địa chỉ:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=2, column=2, sticky="w", pady=5)
-        tk.Entry(frame_top, textvariable=self.p_diachi, font=("Times New Roman", 11), width=45, relief="solid", bd=1).grid(row=2, column=3, columnspan=5, sticky="we", padx=5, pady=5, ipady=4)
+        tk.Label(frame_top, text="Loại khám (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=2, column=2, sticky="w", pady=5)
+        self.cbb_p_loaikham = ttk.Combobox(frame_top, textvariable=self.p_loaikham, values=["Khám nội", "Khám ngoại"], state="readonly", font=("Times New Roman", 10))
+        self.cbb_p_loaikham.grid(row=2, column=3, sticky="we", padx=(5, 15), pady=5, ipady=3)
+
+        tk.Label(frame_top, text="Địa chỉ:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=2, column=4, sticky="w", pady=5)
+        tk.Entry(frame_top, textvariable=self.p_diachi, font=("Times New Roman", 11), width=30, relief="solid", bd=1).grid(row=2, column=5, columnspan=3, sticky="we", padx=5, pady=5, ipady=4)
 
         # Dòng 3: Tiền sử bệnh & Dị ứng thuốc (kéo dài toàn bộ dòng)
         tk.Label(frame_top, text="Tiền sử bệnh:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=3, column=0, sticky="w", pady=5)
@@ -588,20 +1157,21 @@ class QuanLyBenhNhanApp:
         frame_tree = tk.Frame(parent, bg="#FFFFFF")
         frame_tree.pack(fill="both", expand=True, padx=10, pady=(2, 8))
 
-        columns = ("mabn", "hoten", "phai", "ngaysinh", "sdt", "cccd", "bhyt", "nhommau", "diachi", "tiensu")
+        columns = ("mabn", "hoten", "phai", "ngaysinh", "loaikham", "sdt", "cccd", "bhyt", "nhommau", "diachi", "tiensu")
         self.p_tree = ttk.Treeview(frame_tree, columns=columns, show="headings", selectmode="browse")
 
         headers = {
             "mabn": ("Mã BN", 75, "center"),
-            "hoten": ("Họ và Tên", 160, "w"),
-            "phai": ("Phái", 60, "center"),
-            "ngaysinh": ("Ngày sinh", 95, "center"),
-            "sdt": ("Số ĐT", 105, "center"),
-            "cccd": ("CCCD/CMND", 115, "center"),
-            "bhyt": ("Số BHYT", 125, "center"),
-            "nhommau": ("Nhóm máu", 80, "center"),
-            "diachi": ("Địa chỉ", 240, "w"),
-            "tiensu": ("Tiền sử bệnh", 160, "w")
+            "hoten": ("Họ và Tên", 150, "w"),
+            "phai": ("Phái", 55, "center"),
+            "ngaysinh": ("Ngày sinh", 90, "center"),
+            "loaikham": ("Loại khám", 95, "center"),
+            "sdt": ("Số ĐT", 100, "center"),
+            "cccd": ("CCCD/CMND", 110, "center"),
+            "bhyt": ("Số BHYT", 120, "center"),
+            "nhommau": ("Nhóm máu", 75, "center"),
+            "diachi": ("Địa chỉ", 210, "w"),
+            "tiensu": ("Tiền sử bệnh", 140, "w")
         }
         for col, (text, w, align) in headers.items():
             self.p_tree.heading(col, text=text)
@@ -634,12 +1204,13 @@ class QuanLyBenhNhanApp:
             if query:
                 cur.execute(query, params)
             else:
-                cur.execute("SELECT mabn, holot, ten, phai, ngaysinh, sdt, cccd, bhyt, nhommau, diachi, tiensubenh FROM benhnhan ORDER BY mabn DESC")
+                cur.execute("SELECT mabn, holot, ten, phai, ngaysinh, sdt, cccd, bhyt, nhommau, diachi, tiensubenh, loaikham FROM benhnhan ORDER BY mabn DESC")
             rows = cur.fetchall()
             for r in rows:
                 hoten = f"{r[1]} {r[2]}"
                 ns = r[4].strftime("%Y-%m-%d") if r[4] else ""
-                self.p_tree.insert("", "end", values=(r[0], hoten, r[3], ns, r[5], r[6], r[7], r[8], r[9], r[10]))
+                loaikham = r[11] if len(r) > 11 and r[11] else "Khám nội"
+                self.p_tree.insert("", "end", values=(r[0], hoten, r[3], ns, loaikham, r[5], r[6], r[7], r[8], r[9], r[10]))
             conn.close()
         except Exception as e:
             messagebox.showerror("Lỗi", f"Lỗi tải danh sách bệnh nhân:\n{e}")
@@ -656,7 +1227,7 @@ class QuanLyBenhNhanApp:
         if not conn:
             return
         cur = conn.cursor()
-        cur.execute("SELECT mabn, holot, ten, phai, ngaysinh, cccd, sdt, diachi, bhyt, nhommau, tiensubenh FROM benhnhan WHERE mabn=%s", (mabn,))
+        cur.execute("SELECT mabn, holot, ten, phai, ngaysinh, cccd, sdt, diachi, bhyt, nhommau, tiensubenh, loaikham FROM benhnhan WHERE mabn=%s", (mabn,))
         data = cur.fetchone()
         conn.close()
         if data:
@@ -674,6 +1245,7 @@ class QuanLyBenhNhanApp:
             self.p_bhyt.set(data[8] or "")
             self.p_nhommau.set(data[9] or "O")
             self.p_tiensu.set(data[10] or "")
+            self.p_loaikham.set(data[11] or "Khám nội")
 
     # Tự động sinh mã bệnh nhân mới dạng tự tăng (BNxxx) và chuẩn bị thêm mới
     def p_action_add(self):
@@ -706,6 +1278,7 @@ class QuanLyBenhNhanApp:
         self.p_bhyt.set("")
         self.p_nhommau.set("O")
         self.p_tiensu.set("")
+        self.p_loaikham.set("Khám nội")
         self.p_search_var.set("")
         try:
             self.p_date_entry.set_date(datetime.date(1990, 1, 1))
@@ -725,6 +1298,7 @@ class QuanLyBenhNhanApp:
         bhyt = self.p_bhyt.get().strip()
         nhommau = self.p_nhommau.get().strip()
         tiensu = self.p_tiensu.get().strip()
+        loaikham = self.p_loaikham.get().strip() or "Khám nội"
 
         if not mabn or not holot or not ten or not sdt:
             messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập các thông tin bắt buộc: Mã BN, Họ lót, Tên, Số ĐT!")
@@ -740,15 +1314,15 @@ class QuanLyBenhNhanApp:
             if exists:
                 cur.execute("""
                     UPDATE benhnhan
-                    SET holot=%s, ten=%s, phai=%s, ngaysinh=%s, cccd=%s, sdt=%s, diachi=%s, bhyt=%s, nhommau=%s, tiensubenh=%s
+                    SET holot=%s, ten=%s, phai=%s, ngaysinh=%s, cccd=%s, sdt=%s, diachi=%s, bhyt=%s, nhommau=%s, tiensubenh=%s, loaikham=%s
                     WHERE mabn=%s
-                """, (holot, ten, phai, ngaysinh, cccd, sdt, diachi, bhyt, nhommau, tiensu, mabn))
+                """, (holot, ten, phai, ngaysinh, cccd, sdt, diachi, bhyt, nhommau, tiensu, loaikham, mabn))
                 messagebox.showinfo("Thành công", f"Đã cập nhật thông tin bệnh nhân {mabn}!")
             else:
                 cur.execute("""
-                    INSERT INTO benhnhan (mabn, holot, ten, phai, ngaysinh, cccd, sdt, diachi, bhyt, nhommau, tiensubenh)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (mabn, holot, ten, phai, ngaysinh, cccd, sdt, diachi, bhyt, nhommau, tiensu))
+                    INSERT INTO benhnhan (mabn, holot, ten, phai, ngaysinh, cccd, sdt, diachi, bhyt, nhommau, tiensubenh, loaikham)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (mabn, holot, ten, phai, ngaysinh, cccd, sdt, diachi, bhyt, nhommau, tiensu, loaikham))
                 messagebox.showinfo("Thành công", f"Đã thêm mới bệnh nhân {mabn} thành công!")
             conn.commit()
             conn.close()
@@ -788,13 +1362,13 @@ class QuanLyBenhNhanApp:
             self.p_load_data()
             return
         sql = """
-            SELECT mabn, holot, ten, phai, ngaysinh, sdt, cccd, bhyt, nhommau, diachi, tiensubenh
+            SELECT mabn, holot, ten, phai, ngaysinh, sdt, cccd, bhyt, nhommau, diachi, tiensubenh, loaikham
             FROM benhnhan
-            WHERE mabn LIKE %s OR holot LIKE %s OR ten LIKE %s OR sdt LIKE %s OR cccd LIKE %s
+            WHERE mabn LIKE %s OR holot LIKE %s OR ten LIKE %s OR sdt LIKE %s OR cccd LIKE %s OR loaikham LIKE %s
             ORDER BY mabn DESC
         """
         kw = f"%{keyword}%"
-        self.p_load_data(sql, (kw, kw, kw, kw, kw))
+        self.p_load_data(sql, (kw, kw, kw, kw, kw, kw))
 
     # Xuất toàn bộ danh sách bệnh nhân ra file Excel (.xlsx) có định dạng bảng chuẩn
     def p_export_excel(self):
@@ -803,7 +1377,7 @@ class QuanLyBenhNhanApp:
             return
         try:
             cur = conn.cursor()
-            cur.execute("SELECT mabn, holot, ten, phai, ngaysinh, sdt, cccd, bhyt, nhommau, diachi, tiensubenh FROM benhnhan")
+            cur.execute("SELECT mabn, holot, ten, phai, ngaysinh, sdt, cccd, bhyt, nhommau, diachi, tiensubenh, loaikham FROM benhnhan")
             rows = cur.fetchall()
             conn.close()
 
@@ -815,7 +1389,7 @@ class QuanLyBenhNhanApp:
             ws = wb.active
             ws.title = "DanhSachBenhNhan"
 
-            headers = ["STT", "Mã BN", "Họ & Tên lót", "Tên", "Giới tính", "Ngày sinh", "Số ĐT", "CCCD/CMND", "Số BHYT", "Nhóm máu", "Địa chỉ"]
+            headers = ["STT", "Mã BN", "Họ & Tên lót", "Tên", "Giới tính", "Ngày sinh", "Loại khám", "Số ĐT", "CCCD/CMND", "Số BHYT", "Nhóm máu", "Địa chỉ"]
             ws.append(headers)
 
             # Style header bảng
@@ -838,14 +1412,15 @@ class QuanLyBenhNhanApp:
                     ns = r[4].strftime("%d/%m/%Y")
                 else:
                     ns = str(r[4] or "")
-                row_val = [idx, r[0], r[1], r[2], r[3], ns, r[5], r[6], r[7], r[8], r[9]]
+                loaikham = r[11] if len(r) > 11 and r[11] else "Khám nội"
+                row_val = [idx, r[0], r[1], r[2], r[3], ns, loaikham, r[5], r[6], r[7], r[8], r[9]]
                 ws.append(row_val)
                 current_row = idx + 1
                 for col_num in range(1, len(headers) + 1):
                     c = ws.cell(row=current_row, column=col_num)
                     c.font = Font(name="Times New Roman", size=11)
                     c.border = thin_border
-                    if col_num in [1, 2, 5, 6, 7, 8, 9, 10]:
+                    if col_num in [1, 2, 5, 6, 7, 8, 9, 10, 11]:
                         c.alignment = Alignment(horizontal="center")
 
             # Tự động canh độ rộng cột
@@ -879,540 +1454,30 @@ class QuanLyBenhNhanApp:
             messagebox.showerror("Lỗi", f"Không thể xuất file Excel:\n{e}", parent=self.root)
 
     # ==========================================================================
-    # TAB 2: TIẾP NHẬN & KHÁM BỆNH (EXAMINATION + PRESCRIPTION)
+    # PHÂN HỆ KHÁM BỆNH & TOA THUỐC (ĐIỀU HƯỚNG TỚI EXAM TAB HANDLER)
     # ==========================================================================
-    def build_tab_exam(self, parent):
-        paned = tk.PanedWindow(parent, orient="horizontal", bg="#F8FAFC", sashrelief="raised", sashwidth=4)
-        paned.pack(fill="both", expand=True, padx=5, pady=5)
-
-        # KHỐI TRÁI: THÔNG TIN KHÁM VÀ BỆNH ÁN
-        frame_left = tk.LabelFrame(paned, text=" Tiếp nhận & Khám lâm sàng ", font=("Times New Roman", 12, "bold"),
-                                   fg="#0F766E", bg="#FFFFFF", padx=12, pady=10)
-        paned.add(frame_left, minsize=530)
-
-        frame_left.grid_columnconfigure(1, weight=1)
-        frame_left.grid_columnconfigure(3, weight=1)
-
-        self.ex_mapk = tk.StringVar()
-        self.ex_mabn = tk.StringVar()
-        self.ex_bacsi = tk.StringVar()
-        self.ex_khoa = tk.StringVar()
-        self.ex_huyetap = tk.StringVar(value="120/80")
-        self.ex_nhiptim = tk.StringVar(value="75")
-        self.ex_cannang = tk.StringVar(value="60.0")
-
-        # Dòng 0: Mã phiếu khám & Chọn Bệnh nhân
-        tk.Label(frame_left, text="Mã phiếu (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=0, sticky="w", pady=4)
-        tk.Entry(frame_left, textvariable=self.ex_mapk, font=("Times New Roman", 11), width=10, relief="solid", bd=1).grid(row=0, column=1, sticky="we", padx=5, ipady=4)
-
-        tk.Label(frame_left, text="Bệnh nhân (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=2, sticky="w", pady=4)
-        self.cbb_ex_patient = ttk.Combobox(frame_left, width=20, state="readonly", postcommand=self.ex_reload_patients)
-        self.cbb_ex_patient.grid(row=0, column=3, sticky="we", padx=5, ipady=3)
-        self.cbb_ex_patient.bind("<<ComboboxSelected>>", self.ex_on_patient_selected)
-
-        # Dòng 1: Bác sĩ & Khoa khám
-        tk.Label(frame_left, text="Bác sĩ khám:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=0, sticky="w", pady=4)
-        self.cbb_ex_doctor = ttk.Combobox(frame_left, textvariable=self.ex_bacsi, width=18, state="readonly")
-        self.cbb_ex_doctor.grid(row=1, column=1, sticky="we", padx=5, ipady=3)
-
-        tk.Label(frame_left, text="Khoa phòng:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=2, sticky="w", pady=4)
-        self.cbb_ex_khoa = ttk.Combobox(frame_left, textvariable=self.ex_khoa, width=20, state="readonly")
-        self.cbb_ex_khoa.grid(row=1, column=3, sticky="we", padx=5, ipady=3)
-
-        # Dòng 2: Dấu hiệu sinh tồn (Huyết áp, Nhịp tim, Cân nặng)
-        f_vitals = tk.LabelFrame(frame_left, text=" Dấu hiệu sinh tồn ", font=("Times New Roman", 10, "bold"), bg="#F0FDFA", fg="#0D9488", padx=5, pady=4)
-        f_vitals.grid(row=2, column=0, columnspan=4, sticky="we", pady=6)
-
-        tk.Label(f_vitals, text="Huyết áp (mmHg):", font=("Times New Roman", 10), bg="#F0FDFA").pack(side="left", padx=2)
-        tk.Entry(f_vitals, textvariable=self.ex_huyetap, font=("Times New Roman", 10), width=9, relief="solid", bd=1).pack(side="left", padx=(0, 10), ipady=2)
-
-        tk.Label(f_vitals, text="Nhịp tim (l/p):", font=("Times New Roman", 10), bg="#F0FDFA").pack(side="left", padx=2)
-        tk.Entry(f_vitals, textvariable=self.ex_nhiptim, font=("Times New Roman", 10), width=7, relief="solid", bd=1).pack(side="left", padx=(0, 10), ipady=2)
-
-        tk.Label(f_vitals, text="Cân nặng (kg):", font=("Times New Roman", 10), bg="#F0FDFA").pack(side="left", padx=2)
-        tk.Entry(f_vitals, textvariable=self.ex_cannang, font=("Times New Roman", 10), width=7, relief="solid", bd=1).pack(side="left", ipady=2)
-
-        # Dòng 3: Triệu chứng lâm sàng
-        tk.Label(frame_left, text="Triệu chứng:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=3, column=0, sticky="nw", pady=4)
-        self.txt_ex_trieuchung = tk.Text(frame_left, height=2, font=("Times New Roman", 11), padx=6, pady=4, wrap="word", relief="solid", bd=1)
-        self.txt_ex_trieuchung.grid(row=3, column=1, columnspan=3, sticky="we", padx=5, pady=2)
-
-        # Dòng 4: Chẩn đoán
-        tk.Label(frame_left, text="Chẩn đoán (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=4, column=0, sticky="nw", pady=4)
-        self.txt_ex_chandoan = tk.Text(frame_left, height=2, font=("Times New Roman", 11), padx=6, pady=4, wrap="word", relief="solid", bd=1)
-        self.txt_ex_chandoan.grid(row=4, column=1, columnspan=3, sticky="we", padx=5, pady=2)
-
-        # Dòng 5: Lời dặn / Kết luận
-        tk.Label(frame_left, text="Lời dặn bác sĩ:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=5, column=0, sticky="nw", pady=4)
-        self.txt_ex_ketluan = tk.Text(frame_left, height=2, font=("Times New Roman", 11), padx=6, pady=4, wrap="word", relief="solid", bd=1)
-        self.txt_ex_ketluan.grid(row=5, column=1, columnspan=3, sticky="we", padx=5, pady=2)
-
-        # Nút thao tác phiếu khám
-        f_ex_btn = tk.Frame(frame_left, bg="#FFFFFF")
-        f_ex_btn.grid(row=6, column=0, columnspan=4, pady=(10, 5), sticky="we")
-
-        tk.Button(f_ex_btn, text="➕ Tạo phiếu mới", font=("Times New Roman", 11, "bold"), bg="#10B981", fg="white",
-                  relief="flat", cursor="hand2", command=self.ex_action_new).pack(side="left", padx=3)
-        tk.Button(f_ex_btn, text="💾 Lưu Bệnh Án", font=("Times New Roman", 11, "bold"), bg="#0D9488", fg="white",
-                  relief="flat", cursor="hand2", command=self.ex_action_save).pack(side="left", padx=3)
-        tk.Button(f_ex_btn, text="🗑️ Xóa Phiếu", font=("Times New Roman", 11, "bold"), bg="#EF4444", fg="white",
-                  relief="flat", cursor="hand2", command=self.ex_action_delete).pack(side="left", padx=3)
-        tk.Button(f_ex_btn, text="🔄 Làm mới", font=("Times New Roman", 11), bg="#64748B", fg="white",
-                  relief="flat", cursor="hand2", command=self.ex_action_clear).pack(side="left", padx=3)
-
-        # Bảng lịch sử khám gần đây
-        tk.Label(frame_left, text="DANH SÁCH PHIẾU KHÁM GẦN ĐÂY:", font=("Times New Roman", 11, "bold"), fg="#334155", bg="#FFFFFF").grid(row=7, column=0, columnspan=4, sticky="w", pady=(10, 2))
-
-        cols_hist = ("mapk", "mabn", "hoten", "ngaykham", "chandoan", "trangthai")
-        self.ex_tree_hist = ttk.Treeview(frame_left, columns=cols_hist, show="headings", height=6)
-        self.ex_tree_hist.heading("mapk", text="Mã PK")
-        self.ex_tree_hist.heading("mabn", text="Mã BN")
-        self.ex_tree_hist.heading("hoten", text="Họ tên BN")
-        self.ex_tree_hist.heading("ngaykham", text="Ngày khám")
-        self.ex_tree_hist.heading("chandoan", text="Chẩn đoán")
-        self.ex_tree_hist.heading("trangthai", text="Trạng thái")
-
-        self.ex_tree_hist.column("mapk", width=70, anchor="center")
-        self.ex_tree_hist.column("mabn", width=65, anchor="center")
-        self.ex_tree_hist.column("hoten", width=120)
-        self.ex_tree_hist.column("ngaykham", width=120, anchor="center")
-        self.ex_tree_hist.column("chandoan", width=130)
-        self.ex_tree_hist.column("trangthai", width=95, anchor="center")
-
-        self.ex_tree_hist.grid(row=8, column=0, columnspan=4, sticky="nsew")
-        self.ex_tree_hist.bind("<<TreeviewSelect>>", self.ex_on_select_history)
-
-        # KHỐI PHẢI: KÊ ĐƠN THUỐC ĐIỆN TỬ
-        frame_right = tk.LabelFrame(paned, text=" Đơn Thuốc Điện Tử ", font=("Times New Roman", 12, "bold"),
-                                    fg="#0284C7", bg="#FFFFFF", padx=12, pady=10)
-        paned.add(frame_right, minsize=480)
-
-        # Khung chọn thuốc từ kho
-        f_rx_select = tk.Frame(frame_right, bg="#FFFFFF")
-        f_rx_select.pack(fill="x", pady=(0, 5))
-        f_rx_select.grid_columnconfigure(1, weight=1)
-
-        tk.Label(f_rx_select, text="Chọn thuốc (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=0, sticky="w")
-        self.cbb_rx_drug = ttk.Combobox(f_rx_select, width=26, state="readonly")
-        self.cbb_rx_drug.grid(row=0, column=1, padx=5, pady=3, sticky="we", ipady=3)
-
-        tk.Label(f_rx_select, text="Số lượng (*):", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=0, column=2, sticky="w")
-        self.rx_qty_var = tk.StringVar(value="1")
-        tk.Entry(f_rx_select, textvariable=self.rx_qty_var, font=("Times New Roman", 11), width=6, relief="solid", bd=1).grid(row=0, column=3, padx=5, pady=3, sticky="w", ipady=3)
-
-        tk.Label(f_rx_select, text="Cách dùng / Liều:", font=("Times New Roman", 11, "bold"), bg="#FFFFFF").grid(row=1, column=0, sticky="w")
-        self.rx_instruction_var = tk.StringVar(value="Uống 1 viên x 2 lần/ngày sau ăn")
-        tk.Entry(f_rx_select, textvariable=self.rx_instruction_var, font=("Times New Roman", 11), width=26, relief="solid", bd=1).grid(row=1, column=1, columnspan=2, padx=5, pady=3, sticky="we", ipady=3)
-
-        btn_add_drug = tk.Button(f_rx_select, text="➕ Thêm thuốc", font=("Times New Roman", 10, "bold"), bg="#0284C7", fg="white",
-                                 relief="flat", cursor="hand2", command=self.rx_action_add_drug)
-        btn_add_drug.grid(row=1, column=3, padx=5, pady=3, sticky="we")
-
-        # Bảng hiển thị danh sách thuốc đã kê
-        cols_rx = ("mathuoc", "tenthuoc", "donvitinh", "soluong", "dongia", "thanhtien", "cachdung")
-        self.rx_tree = ttk.Treeview(frame_right, columns=cols_rx, show="headings", height=12)
-        self.rx_tree.heading("mathuoc", text="Mã")
-        self.rx_tree.heading("tenthuoc", text="Tên thuốc")
-        self.rx_tree.heading("donvitinh", text="ĐVT")
-        self.rx_tree.heading("soluong", text="SL")
-        self.rx_tree.heading("dongia", text="Đơn giá")
-        self.rx_tree.heading("thanhtien", text="Thành tiền")
-        self.rx_tree.heading("cachdung", text="Cách dùng")
-
-        self.rx_tree.column("mathuoc", width=55, anchor="center")
-        self.rx_tree.column("tenthuoc", width=140)
-        self.rx_tree.column("donvitinh", width=50, anchor="center")
-        self.rx_tree.column("soluong", width=45, anchor="center")
-        self.rx_tree.column("dongia", width=80, anchor="e")
-        self.rx_tree.column("thanhtien", width=85, anchor="e")
-        self.rx_tree.column("cachdung", width=160)
-
-        self.rx_tree.pack(fill="both", expand=True, pady=5)
-
-        # Thanh tổng cộng & nút xóa thuốc
-        f_rx_bottom = tk.Frame(frame_right, bg="#FFFFFF")
-        f_rx_bottom.pack(fill="x", pady=5)
-
-        btn_del_drug = tk.Button(f_rx_bottom, text="❌ Xóa thuốc chọn", font=("Times New Roman", 10, "bold"), bg="#EF4444", fg="white",
-                                 relief="flat", cursor="hand2", command=self.rx_action_remove_drug)
-        btn_del_drug.pack(side="left")
-
-        self.lbl_rx_total = tk.Label(f_rx_bottom, text="Tổng tiền thuốc: 0 đ", font=("Times New Roman", 12, "bold"), fg="#DC2626", bg="#FFFFFF")
-        self.lbl_rx_total.pack(side="right")
-
-        # Nạp dữ liệu vào Combobox
-        self.ex_load_comboboxes()
-        self.ex_load_history()
-
-    # Tải lại danh sách bệnh nhân vào combobox để cập nhật các bệnh nhân mới tiếp nhận
-    def ex_reload_patients(self):
-        """Tự động làm mới danh sách bệnh nhân khi người dùng bấm mở Combobox"""
-        conn = get_connection()
-        if not conn:
-            return
-        try:
-            cur = conn.cursor()
-            cur.execute("SELECT mabn, holot, ten FROM benhnhan ORDER BY mabn ASC")
-            rows = cur.fetchall()
-            conn.close()
-            self.patients_cache = {f"{r[0]} - {r[1]} {r[2]}": r[0] for r in rows}
-            self.cbb_ex_patient["values"] = list(self.patients_cache.keys())
-            curr = self.cbb_ex_patient.get().strip()
-            if curr in self.patients_cache:
-                self.ex_mabn.set(self.patients_cache[curr])
-            elif " - " in curr:
-                self.ex_mabn.set(curr.split(" - ")[0].strip())
-            elif rows and not curr:
-                first_val = list(self.patients_cache.keys())[0]
-                self.cbb_ex_patient.set(first_val)
-                self.ex_mabn.set(self.patients_cache[first_val])
-        except Exception:
-            pass
-
-    # Nạp danh mục Bác sĩ, Khoa phòng và Thuốc từ CSDL vào các Combobox chọn lựa
-    def ex_load_comboboxes(self):
-        conn = get_connection()
-        if not conn:
-            return
-        cur = conn.cursor()
-        # Bệnh nhân (xếp theo mã để bệnh nhân mới tạo xuất hiện rõ ràng)
-        cur.execute("SELECT mabn, holot, ten FROM benhnhan ORDER BY mabn ASC")
-        rows = cur.fetchall()
-        self.patients_cache = {f"{r[0]} - {r[1]} {r[2]}": r[0] for r in rows}
-        self.cbb_ex_patient["values"] = list(self.patients_cache.keys())
-        if rows:
-            first_val = list(self.patients_cache.keys())[0]
-            self.cbb_ex_patient.set(first_val)
-            self.ex_mabn.set(self.patients_cache[first_val])
-
-        # Bác sĩ
-        cur.execute("SELECT manv, hoten FROM nhanvien WHERE vaitro='Bác sĩ' OR vaitro='Admin' ORDER BY hoten ASC")
-        docs = cur.fetchall()
-        self.doctors_cache = {f"{r[0]} - {r[1]}": r[0] for r in docs}
-        self.cbb_ex_doctor["values"] = list(self.doctors_cache.keys())
-        if docs:
-            self.cbb_ex_doctor.set(list(self.doctors_cache.keys())[0])
-
-        # Khoa phòng
-        cur.execute("SELECT makhoa, tenkhoa FROM khoaphong ORDER BY makhoa ASC")
-        khoas = cur.fetchall()
-        self.khoas_cache = {f"{r[0]} - {r[1]}": r[0] for r in khoas}
-        self.cbb_ex_khoa["values"] = list(self.khoas_cache.keys())
-        if khoas:
-            self.cbb_ex_khoa.set(list(self.khoas_cache.keys())[0])
-
-        # Thuốc
-        cur.execute("SELECT mathuoc, tenthuoc, donvitinh, dongia, soluongton FROM thuoc WHERE soluongton > 0 ORDER BY tenthuoc ASC")
-        drugs = cur.fetchall()
-        self.drugs_cache = {f"{r[0]} | {r[1]} ({r[2]}) - {int(r[3]):,}đ [Tồn: {r[4]}]": {
-            "mathuoc": r[0], "tenthuoc": r[1], "donvitinh": r[2], "dongia": float(r[3]), "soluongton": r[4]
-        } for r in drugs}
-        self.cbb_rx_drug["values"] = list(self.drugs_cache.keys())
-        if drugs:
-            self.cbb_rx_drug.set(list(self.drugs_cache.keys())[0])
-
-        conn.close()
-
-    # Bắt sự kiện chọn bệnh nhân từ Combobox và lưu mã bệnh nhân
-    def ex_on_patient_selected(self, event=None):
-        val = self.cbb_ex_patient.get().strip()
-        if val in self.patients_cache:
-            self.ex_mabn.set(self.patients_cache[val])
-        elif " - " in val:
-            self.ex_mabn.set(val.split(" - ")[0].strip())
-        elif val:
-            self.ex_mabn.set(val)
-
-    # Nạp danh sách các phiếu khám gần đây vào bảng lịch sử khám lâm sàng
-    def ex_load_history(self):
-        for r in self.ex_tree_hist.get_children():
-            self.ex_tree_hist.delete(r)
-        conn = get_connection()
-        if not conn:
-            return
-        cur = conn.cursor()
-        sql = """
-            SELECT pk.mapk, pk.mabn, CONCAT(bn.holot, ' ', bn.ten) as hoten, pk.ngaykham, pk.chandoan, pk.trangthai
-            FROM phieukham pk
-            JOIN benhnhan bn ON pk.mabn = bn.mabn
-            ORDER BY pk.ngaykham DESC LIMIT 30
-        """
-        cur.execute(sql)
-        for row in cur.fetchall():
-            nk = row[3].strftime("%d/%m/%Y %H:%M") if row[3] else ""
-            self.ex_tree_hist.insert("", "end", values=(row[0], row[1], row[2], nk, row[4], row[5]))
-        conn.close()
-
-    # Click chọn một phiếu khám cũ: hiển thị lại thông tin khám và tải danh sách đơn thuốc đã kê
-    def ex_on_select_history(self, event):
-        sel = self.ex_tree_hist.selection()
-        if not sel:
-            return
-        mapk = self.ex_tree_hist.item(sel[0])["values"][0]
-        conn = get_connection()
-        if not conn:
-            return
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT mapk, mabn, manv_bacsi, makhoa, ngaykham, trieuchung, huyetap, nhiptim, cannang, chandoan, ketluan, trangthai
-            FROM phieukham WHERE mapk=%s
-        """, (mapk,))
-        row = cur.fetchone()
-        if row:
-            self.ex_mapk.set(row[0])
-            self.ex_mabn.set(row[1])
-            # Set combobox bệnh nhân
-            for k, v in self.patients_cache.items():
-                if v == row[1]:
-                    self.cbb_ex_patient.set(k)
-                    break
-            # Set combobox bác sĩ
-            for k, v in self.doctors_cache.items():
-                if v == row[2]:
-                    self.cbb_ex_doctor.set(k)
-                    break
-            # Set combobox khoa
-            for k, v in self.khoas_cache.items():
-                if v == row[3]:
-                    self.cbb_ex_khoa.set(k)
-                    break
-
-            self.txt_ex_trieuchung.delete("1.0", tk.END)
-            self.txt_ex_trieuchung.insert("1.0", row[5] or "")
-
-            self.ex_huyetap.set(row[6] or "120/80")
-            self.ex_nhiptim.set(str(row[7] or 75))
-            self.ex_cannang.set(str(row[8] or 60.0))
-
-            self.txt_ex_chandoan.delete("1.0", tk.END)
-            self.txt_ex_chandoan.insert("1.0", row[9] or "")
-
-            self.txt_ex_ketluan.delete("1.0", tk.END)
-            self.txt_ex_ketluan.insert("1.0", row[10] or "")
-
-            # Nạp lại danh sách thuốc đã kê của phiếu khám này
-            self.rx_load_prescription(mapk)
-
-        conn.close()
-
-    # Tải danh sách chi tiết các loại thuốc trong đơn thuốc của một phiếu khám
-    def rx_load_prescription(self, mapk):
-        for r in self.rx_tree.get_children():
-            self.rx_tree.delete(r)
-        conn = get_connection()
-        if not conn:
-            return
-        cur = conn.cursor()
-        cur.execute("SELECT mathuoc, tenthuoc, donvitinh, soluong, dongia, thanhtien, cachdung FROM toathuoc_chitiet WHERE mapk=%s", (mapk,))
-        total = 0
-        for r in cur.fetchall():
-            self.rx_tree.insert("", "end", values=(r[0], r[1], r[2], r[3], f"{int(r[4]):,}đ", f"{int(r[5]):,}đ", r[6]))
-            total += float(r[5])
-        self.lbl_rx_total.config(text=f"Tổng tiền thuốc: {int(total):,} đ")
-        conn.close()
-
-    # Tự động sinh mã phiếu khám mới (PKxxx) và đặt các chỉ số sinh hiệu mặc định
-    def ex_action_new(self):
-        self.ex_action_clear()
-        # Sinh mã phiếu khám mới
-        conn = get_connection()
-        if conn:
-            cur = conn.cursor()
-            cur.execute("SELECT mapk FROM phieukham WHERE mapk LIKE 'PK%' ORDER BY LENGTH(mapk) DESC, mapk DESC LIMIT 1")
-            row = cur.fetchone()
-            conn.close()
-            if row and row[0].startswith("PK"):
-                try:
-                    num = int(row[0][2:]) + 1
-                    self.ex_mapk.set(f"PK{num:03d}")
-                except Exception:
-                    self.ex_mapk.set("PK001")
-            else:
-                self.ex_mapk.set("PK001")
-
-    # Xóa trắng form tiếp nhận khám bệnh và danh sách thuốc kê đơn
-    def ex_action_clear(self):
-        self.ex_mapk.set("")
-        if hasattr(self, "cbb_ex_patient") and self.cbb_ex_patient["values"]:
-            first_val = self.cbb_ex_patient["values"][0]
-            self.cbb_ex_patient.set(first_val)
-            self.ex_mabn.set(self.patients_cache.get(first_val, first_val.split(" - ")[0].strip()))
+    def build_tab_exam(self, parent, loai_kham="Khám nội"):
+        """Dựng giao diện phân hệ khám bệnh (khám nội hoặc khám ngoại)"""
+        handler = ExamTabHandler(self, parent, loai_kham=loai_kham)
+        if loai_kham == "Khám nội":
+            self.exam_handler_noi = handler
         else:
-            self.ex_mabn.set("")
-            if hasattr(self, "cbb_ex_patient"):
-                self.cbb_ex_patient.set("")
-        self.txt_ex_trieuchung.delete("1.0", tk.END)
-        self.txt_ex_chandoan.delete("1.0", tk.END)
-        self.txt_ex_ketluan.delete("1.0", tk.END)
-        for r in self.rx_tree.get_children():
-            self.rx_tree.delete(r)
-        self.lbl_rx_total.config(text="Tổng tiền thuốc: 0 đ")
+            self.exam_handler_ngoai = handler
+        return handler
 
-    # Thêm thuốc vào đơn thuốc điện tử (kiểm tra tồn kho và tính thành tiền)
-    def rx_action_add_drug(self):
-        drug_label = self.cbb_rx_drug.get()
-        if drug_label not in self.drugs_cache:
-            messagebox.showwarning("Cảnh báo", "Vui lòng chọn thuốc hợp lệ từ danh mục!")
-            return
-        drug_info = self.drugs_cache[drug_label]
+    def ex_load_comboboxes(self):
+        """Làm mới dữ liệu combobox cho cả 2 phân hệ Khám nội và Khám ngoại"""
+        if hasattr(self, 'exam_handler_noi'):
+            self.exam_handler_noi.load_comboboxes()
+        if hasattr(self, 'exam_handler_ngoai'):
+            self.exam_handler_ngoai.load_comboboxes()
 
-        try:
-            qty = int(self.rx_qty_var.get().strip())
-            if qty <= 0:
-                raise ValueError()
-        except ValueError:
-            messagebox.showwarning("Cảnh báo", "Số lượng thuốc phải là số nguyên dương!")
-            return
-
-        if qty > drug_info["soluongton"]:
-            messagebox.showwarning("Hết hàng", f"Số lượng thuốc tồn kho chỉ còn {drug_info['soluongton']} {drug_info['donvitinh']}!")
-            return
-
-        instruction = self.rx_instruction_var.get().strip()
-        thanhtien = qty * drug_info["dongia"]
-
-        # Kiểm tra xem thuốc này đã có trong toa chưa
-        for child in self.rx_tree.get_children():
-            if self.rx_tree.item(child)["values"][0] == drug_info["mathuoc"]:
-                messagebox.showwarning("Thông báo", "Thuốc này đã có trong toa, hãy xóa dòng cũ trước nếu muốn sửa số lượng!")
-                return
-
-        self.rx_tree.insert("", "end", values=(
-            drug_info["mathuoc"], drug_info["tenthuoc"], drug_info["donvitinh"],
-            qty, f"{int(drug_info['dongia']):,}đ", f"{int(thanhtien):,}đ", instruction
-        ))
-        self.rx_calculate_total()
-
-    # Xóa thuốc đang chọn khỏi danh sách kê đơn hiện tại
-    def rx_action_remove_drug(self):
-        sel = self.rx_tree.selection()
-        if not sel:
-            messagebox.showwarning("Chưa chọn", "Vui lòng chọn dòng thuốc muốn xóa khỏi toa!")
-            return
-        self.rx_tree.delete(sel[0])
-        self.rx_calculate_total()
-
-    # Tính tổng tiền thuốc của toàn bộ toa thuốc hiện tại
-    def rx_calculate_total(self):
-        total = 0
-        for child in self.rx_tree.get_children():
-            val = self.rx_tree.item(child)["values"][5]
-            clean_val = str(val).replace(",", "").replace("đ", "").strip()
-            total += float(clean_val)
-        self.lbl_rx_total.config(text=f"Tổng tiền thuốc: {int(total):,} đ")
-
-    # Lưu bệnh án và đơn thuốc vào CSDL (quản lý giao dịch Transaction và tự động trừ kho thuốc)
-    def ex_action_save(self):
-        mapk = self.ex_mapk.get().strip()
-        
-        # Đồng bộ lấy mã bệnh nhân từ biến hoặc từ text hiển thị trên Combobox
-        mabn = self.ex_mabn.get().strip()
-        cbb_p_val = self.cbb_ex_patient.get().strip()
-        if not mabn and cbb_p_val:
-            if cbb_p_val in self.patients_cache:
-                mabn = self.patients_cache[cbb_p_val]
-            elif " - " in cbb_p_val:
-                mabn = cbb_p_val.split(" - ")[0].strip()
-            else:
-                mabn = cbb_p_val
-            self.ex_mabn.set(mabn)
-
-        doc_label = self.cbb_ex_doctor.get().strip()
-        khoa_label = self.cbb_ex_khoa.get().strip()
-        trieuchung = self.txt_ex_trieuchung.get("1.0", tk.END).strip()
-        chandoan = self.txt_ex_chandoan.get("1.0", tk.END).strip()
-        ketluan = self.txt_ex_ketluan.get("1.0", tk.END).strip()
-        huyetap = self.ex_huyetap.get().strip()
-
-        try:
-            nhiptim = int(self.ex_nhiptim.get().strip())
-            cannang = float(self.ex_cannang.get().strip())
-        except ValueError:
-            messagebox.showwarning("Sai định dạng", "Nhịp tim và cân nặng phải là số!")
-            return
-
-        if not mapk or not mabn or not chandoan:
-            messagebox.showwarning("Thiếu dữ liệu", "Vui lòng nhập đầy đủ: Mã phiếu khám, Bệnh nhân và Chẩn đoán bệnh!")
-            return
-
-        manv_bacsi = self.doctors_cache.get(doc_label)
-        if not manv_bacsi and " - " in doc_label:
-            manv_bacsi = doc_label.split(" - ")[0].strip()
-        if not manv_bacsi:
-            manv_bacsi = "NV01"
-
-        makhoa = self.khoas_cache.get(khoa_label)
-        if not makhoa and " - " in khoa_label:
-            makhoa = khoa_label.split(" - ")[0].strip()
-        if not makhoa:
-            makhoa = "K01"
-
-        ngaykham = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        conn = get_connection()
-        if not conn:
-            return
-        try:
-            cur = conn.cursor()
-            cur.execute("SELECT mapk FROM phieukham WHERE mapk=%s", (mapk,))
-            exists = cur.fetchone()
-
-            if exists:
-                cur.execute("""
-                    UPDATE phieukham
-                    SET mabn=%s, manv_bacsi=%s, makhoa=%s, trieuchung=%s, huyetap=%s, nhiptim=%s, cannang=%s, chandoan=%s, ketluan=%s
-                    WHERE mapk=%s
-                """, (mabn, manv_bacsi, makhoa, trieuchung, huyetap, nhiptim, cannang, chandoan, ketluan, mapk))
-            else:
-                cur.execute("""
-                    INSERT INTO phieukham (mapk, mabn, manv_bacsi, makhoa, ngaykham, trieuchung, huyetap, nhiptim, cannang, chandoan, ketluan, trangthai)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Chờ thanh toán')
-                """, (mapk, mabn, manv_bacsi, makhoa, ngaykham, trieuchung, huyetap, nhiptim, cannang, chandoan, ketluan))
-
-            # Cập nhật chi tiết toa thuốc
-            cur.execute("DELETE FROM toathuoc_chitiet WHERE mapk=%s", (mapk,))
-            for child in self.rx_tree.get_children():
-                v = self.rx_tree.item(child)["values"]
-                mathuoc = v[0]
-                tenthuoc = v[1]
-                donvitinh = v[2]
-                soluong = int(v[3])
-                dongia = float(str(v[4]).replace(",", "").replace("đ", "").strip())
-                thanhtien = float(str(v[5]).replace(",", "").replace("đ", "").strip())
-                cachdung = v[6]
-
-                cur.execute("""
-                    INSERT INTO toathuoc_chitiet (mapk, mathuoc, tenthuoc, donvitinh, soluong, dongia, cachdung, thanhtien)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (mapk, mathuoc, tenthuoc, donvitinh, soluong, dongia, cachdung, thanhtien))
-
-            conn.commit()
-            conn.close()
-            messagebox.showinfo("Thành công", f"Đã lưu hồ sơ bệnh án và đơn thuốc cho phiếu khám [{mapk}]!")
-            self.ex_load_history()
-        except Exception as e:
-            messagebox.showerror("Lỗi CSDL", f"Lỗi khi lưu bệnh án:\n{e}")
-
-    # Xóa phiếu khám bệnh và hoàn trả số lượng thuốc đã kê lại vào kho dược
-    def ex_action_delete(self):
-        mapk = self.ex_mapk.get().strip()
-        if not mapk:
-            messagebox.showwarning("Chưa chọn", "Vui lòng chọn phiếu khám cần xóa!")
-            return
-        if messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa phiếu khám [{mapk}] cùng toàn bộ đơn thuốc liên quan?"):
-            conn = get_connection()
-            if not conn:
-                return
-            try:
-                cur = conn.cursor()
-                cur.execute("DELETE FROM phieukham WHERE mapk=%s", (mapk,))
-                conn.commit()
-                conn.close()
-                messagebox.showinfo("Thành công", f"Đã xóa thành công phiếu khám {mapk}!")
-                self.ex_action_clear()
-                self.ex_load_history()
-            except Exception as e:
-                messagebox.showerror("Lỗi CSDL", f"Không thể xóa phiếu khám:\n{e}")
+    def ex_load_history(self):
+        """Làm mới danh sách phiếu khám gần đây cho cả 2 phân hệ Khám nội và Khám ngoại"""
+        if hasattr(self, 'exam_handler_noi'):
+            self.exam_handler_noi.load_history()
+        if hasattr(self, 'exam_handler_ngoai'):
+            self.exam_handler_ngoai.load_history()
 
     # ==========================================================================
     # TAB 3: QUẢN LÝ KHO DƯỢC PHẨM (PHARMACY CRUD)

@@ -86,7 +86,8 @@ def init_database(force=False):
                 diachi VARCHAR(255) NOT NULL,
                 bhyt VARCHAR(30),
                 nhommau VARCHAR(10) DEFAULT 'O',
-                tiensubenh TEXT
+                tiensubenh TEXT,
+                loaikham VARCHAR(30) DEFAULT 'Khám nội'
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         """)
 
@@ -204,16 +205,16 @@ def init_database(force=False):
 
             # Bệnh nhân mẫu (Khu vực An Giang)
             bn_data = [
-                ("BN001", "Võ Đức", "Thịnh", "Nam", "1985-05-12", "089085001234", "0918123456", "Số 123 Hà Hoàng Hổ, Mỹ Xuyên, TP. Long Xuyên, An Giang", "DN4890012345678", "O", "Dị ứng phấn hoa"),
-                ("BN002", "Hà Minh ", "Trí", "Nữ", "1992-08-20", "089192002345", "0982234567", "Số 45 Trần Hưng Đạo, Mỹ Bình, TP. Long Xuyên, An Giang", "GD4890023456789", "A", "Không"),
-                ("BN003", "Trần Sĩ", "Tấn", "Nam", "1978-03-15", "089078003456", "0903345678", "Số 78 Lý Thái Tổ, Mỹ Long, TP. Long Xuyên, An Giang", "DN4890034567890", "B", "Tăng huyết áp"),
-                ("BN004", "Huỳnh Thành", "Trí", "Nữ", "2000-11-05", "089100004567", "0974456789", "Thị trấn Chợ Mới, Huyện Chợ Mới, An Giang", "SV4890045678901", "AB", "Không"),
-                ("BN005", "Lê Đức", "Việt", "Nam", "1965-09-28", "089065005678", "0935567890", "Phường Châu Phú A, TP. Châu Đốc, An Giang", "HT4890056789012", "O", "Đái tháo đường týp 2"),
-                ("BN006", "Lê Minh", "Vương", "Nữ", "1998-04-18", "089198006789", "0966678901", "Thị trấn Phú Mỹ, Huyện Phú Tân, An Giang", "DN4890067890123", "A", "Viêm mũi xoang"),
-                ("BN007", "Nguyễn Đình", "Trí", "Nam", "2015-06-22", "089015007890", "0917789012", "Xã Mỹ Hòa Hưng, TP. Long Xuyên, An Giang", "TE4890078901234", "B", "Không"),
-                ("BN008", "Nguyễn Hoàng", "Thiện", "Nữ", "1973-12-30", "089173008901", "0948890123", "Thị trấn Núi Sập, Huyện Thoại Sơn, An Giang", "GD4890089012345", "O", "Đau dạ dày mạn tính")
+                ("BN001", "Võ Đức", "Thịnh", "Nam", "1985-05-12", "089085001234", "0918123456", "Số 123 Hà Hoàng Hổ, Mỹ Xuyên, TP. Long Xuyên, An Giang", "DN4890012345678", "O", "Dị ứng phấn hoa", "Khám nội"),
+                ("BN002", "Hà Minh ", "Trí", "Nữ", "1992-08-20", "089192002345", "0982234567", "Số 45 Trần Hưng Đạo, Mỹ Bình, TP. Long Xuyên, An Giang", "GD4890023456789", "A", "Không", "Khám ngoại"),
+                ("BN003", "Trần Sĩ", "Tấn", "Nam", "1978-03-15", "089078003456", "0903345678", "Số 78 Lý Thái Tổ, Mỹ Long, TP. Long Xuyên, An Giang", "DN4890034567890", "B", "Tăng huyết áp", "Khám nội"),
+                ("BN004", "Huỳnh Thành", "Trí", "Nữ", "2000-11-05", "089100004567", "0974456789", "Thị trấn Chợ Mới, Huyện Chợ Mới, An Giang", "SV4890045678901", "AB", "Không", "Khám ngoại"),
+                ("BN005", "Lê Đức", "Việt", "Nam", "1965-09-28", "089065005678", "0935567890", "Phường Châu Phú A, TP. Châu Đốc, An Giang", "HT4890056789012", "O", "Đái tháo đường týp 2", "Khám nội"),
+                ("BN006", "Lê Minh", "Vương", "Nữ", "1998-04-18", "089198006789", "0966678901", "Thị trấn Phú Mỹ, Huyện Phú Tân, An Giang", "DN4890067890123", "A", "Viêm mũi xoang", "Khám ngoại"),
+                ("BN007", "Nguyễn Đình", "Trí", "Nam", "2015-06-22", "089015007890", "0917789012", "Xã Mỹ Hòa Hưng, TP. Long Xuyên, An Giang", "TE4890078901234", "B", "Không", "Khám nội"),
+                ("BN008", "Nguyễn Hoàng", "Thiện", "Nữ", "1973-12-30", "089173008901", "0948890123", "Thị trấn Núi Sập, Huyện Thoại Sơn, An Giang", "GD4890089012345", "O", "Đau dạ dày mạn tính", "Khám ngoại")
             ]
-            cur.executemany("INSERT INTO benhnhan VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", bn_data)
+            cur.executemany("INSERT INTO benhnhan VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", bn_data)
 
             # Phiếu khám mẫu
             pk_data = [
