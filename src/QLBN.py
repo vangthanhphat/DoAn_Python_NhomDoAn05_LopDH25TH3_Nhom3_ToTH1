@@ -1055,7 +1055,7 @@ class QuanLyBenhNhanApp:
         self.p_bhyt = tk.StringVar()
         self.p_nhommau = tk.StringVar(value="O")
         self.p_tiensu = tk.StringVar()
-        self.p_loaikham = tk.StringVar(value="Khám nội")
+        self.p_loaikham = tk.StringVar(value="Khám nội") ###############
 
         # Cấu hình tỷ lệ các cột để form luôn cân đối và tự động co giãn theo kích thước cửa sổ
         frame_top.grid_columnconfigure(1, weight=2)
